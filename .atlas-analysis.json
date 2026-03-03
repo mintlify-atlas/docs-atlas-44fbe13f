@@ -1,0 +1,132 @@
+{
+  "projectType": "general",
+  "projectName": "niri",
+  "projectDescription": "A scrollable-tiling Wayland compositor written in Rust",
+  "theme": "aspen",
+  "primaryColor": "#7c3aed",
+  "lightColor": "#a78bfa",
+  "darkColor": "#6d28d9",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "getting-started",
+              "important-software"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/workspaces",
+              "concepts/overview",
+              "concepts/tabs",
+              "concepts/floating-windows",
+              "concepts/fullscreen-and-maximize",
+              "concepts/gestures"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/introduction",
+              "configuration/overview",
+              "configuration/input",
+              "configuration/outputs",
+              "configuration/key-bindings",
+              "configuration/switch-events",
+              "configuration/layout",
+              "configuration/window-rules",
+              "configuration/layer-rules",
+              "configuration/animations",
+              "configuration/gestures",
+              "configuration/recent-windows",
+              "configuration/named-workspaces",
+              "configuration/include",
+              "configuration/debug-options",
+              "configuration/miscellaneous"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/accessibility",
+              "features/screencasting",
+              "features/xwayland",
+              "features/ipc"
+            ]
+          },
+          {
+            "group": "Integration",
+            "pages": [
+              "integration/integrating-niri",
+              "integration/layer-shell-components",
+              "integration/example-systemd-setup"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/nvidia",
+              "troubleshooting/application-issues",
+              "troubleshooting/faq"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/developing-niri",
+              "development/packaging-niri",
+              "development/design-principles",
+              "development/animation-timing",
+              "development/fractional-layout",
+              "development/redraw-loop",
+              "development/documenting-niri"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Scrollable tiling window management",
+    "Dynamic workspaces with per-monitor independence",
+    "Built-in Overview mode and screenshot UI",
+    "Touchpad and mouse gestures",
+    "Window tabs and groups",
+    "Live-reloading configuration in KDL format",
+    "Gradient borders with Oklab/Oklch support",
+    "Custom shader support for animations",
+    "IPC interface for scripting and integration",
+    "Accessibility support with screen readers",
+    "Screencasting with dynamic cast targets",
+    "Xwayland integration via xwayland-satellite"
+  ],
+  "publicApiSurface": [
+    "niri (main binary)",
+    "niri msg outputs",
+    "niri msg workspaces",
+    "niri msg windows",
+    "niri msg layers",
+    "niri msg keyboard-layouts",
+    "niri msg focused-output",
+    "niri msg focused-window",
+    "niri msg pick-window",
+    "niri msg pick-color",
+    "niri msg action <action>",
+    "niri msg output <output> <action>",
+    "niri msg event-stream",
+    "niri msg version",
+    "niri msg overview-state",
+    "niri msg casts",
+    "niri validate",
+    "niri completions <shell>",
+    "niri-ipc (Rust crate)",
+    "niri-config (Rust crate)",
+    "NIRI_SOCKET (environment variable)"
+  ]
+}

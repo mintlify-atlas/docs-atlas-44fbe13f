@@ -1,0 +1,443 @@
+---
+title: Layout Configuration
+description: Configure window positioning, sizing, gaps, borders, focus ring, and visual effects in niri
+---
+
+## Overview
+
+In the `layout {}` section you can change various settings that influence how windows are positioned and sized.
+
+```kdl
+layout {
+    gaps 16
+    center-focused-column "never"
+    always-center-single-column
+    
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+    
+    default-column-width { proportion 0.5; }
+}
+```
+
+<Badge text="Since: 25.11" /> You can override these settings for specific outputs and named workspaces.
+
+## Basic Layout
+
+### Gaps
+
+Set gaps around (inside and outside) windows in logical pixels.
+
+```kdl
+layout {
+    gaps 16
+}
+```
+
+<Info>
+  <Badge text="Since: 0.1.7" /> You can use fractional values. The value will be rounded to physical pixels according to the scale factor of every output. For example, `gaps 0.5` on an output with `scale 2` will result in one physical-pixel wide gaps.
+  
+  <Badge text="Since: 0.1.8" /> You can emulate "inner" vs. "outer" gaps with negative `struts` values.
+</Info>
+
+### Center Focused Column
+
+When to center a column when changing focus.
+
+<ParamField path="center-focused-column" type="string" default="never">
+  - `never`: no special centering, focusing an off-screen column will scroll it to the left or right edge
+  - `always`: the focused column will always be centered
+  - `on-overflow`: focusing a column will center it if it doesn't fit on screen together with the previously focused column
+</ParamField>
+
+```kdl
+layout {
+    center-focused-column "always"
+}
+```
+
+### Always Center Single Column
+
+<Badge text="Since: 0.1.9" />
+
+If set, niri will always center a single column on a workspace, regardless of the `center-focused-column` option.
+
+```kdl
+layout {
+    always-center-single-column
+}
+```
+
+### Empty Workspace Above First
+
+<Badge text="Since: 25.01" />
+
+If set, niri will always add an empty workspace at the very start, in addition to the empty workspace at the very end.
+
+```kdl
+layout {
+    empty-workspace-above-first
+}
+```
+
+### Default Column Display
+
+<Badge text="Since: 25.02" />
+
+Sets the default display mode for new columns. Can be `normal` or `tabbed`.
+
+```kdl
+// Make all new columns tabbed by default.
+layout {
+    default-column-display "tabbed"
+
+    tab-indicator {
+        hide-when-single-tab
+    }
+}
+```
+
+## Column and Window Sizing
+
+### Preset Column Widths
+
+Set the widths that the `switch-preset-column-width` action (Mod+R) toggles between.
+
+<ParamField path="proportion" type="number">
+  Sets the width as a fraction of the output width, taking gaps into account. For example, you can perfectly fit four windows sized `proportion 0.25` on an output.
+</ParamField>
+
+<ParamField path="fixed" type="number">
+  Sets the window width in logical pixels exactly.
+</ParamField>
+
+```kdl
+layout {
+    // Cycle between 1/3, 1/2, 2/3 of the output, and a fixed 1280 logical pixels.
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        fixed 1280
+    }
+}
+```
+
+### Default Column Width
+
+Set the default width of new windows. The syntax is the same as in `preset-column-widths`.
+
+```kdl
+layout {
+    // Open new windows sized 1/3 of the output.
+    default-column-width { proportion 0.33333; }
+}
+```
+
+You can also leave the brackets empty, then the windows themselves will decide their initial width:
+
+```kdl
+layout {
+    // New windows decide their initial width themselves.
+    default-column-width {}
+}
+```
+
+<Warning>
+  `default-column-width {}` causes niri to send a (0, H) size in the initial configure request. This is a bit unclearly defined in the Wayland protocol, so some clients may misinterpret it.
+  
+  `default-column-width {}` is most useful for specific windows, in form of a window rule with the same syntax.
+</Warning>
+
+### Preset Window Heights
+
+<Badge text="Since: 0.1.9" />
+
+Set the heights that the `switch-preset-window-height` action (Mod+Shift+R) toggles between.
+
+```kdl
+layout {
+    // Cycle between 1/3, 1/2, 2/3 of the output, and a fixed 720 logical pixels.
+    preset-window-heights {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        fixed 720
+    }
+}
+```
+
+## Visual Effects
+
+### Focus Ring and Border
+
+Focus ring and border are drawn around windows and indicate the active window. They are very similar and have the same options.
+
+<CardGroup cols={2}>
+  <Card title="Focus Ring">
+    Drawn only around the active window
+  </Card>
+  <Card title="Border">
+    Drawn around all windows and affects their sizes (windows shrink to make space)
+  </Card>
+</CardGroup>
+
+```kdl
+layout {
+    focus-ring {
+        width 4
+        active-color "#7fc8ff"
+        inactive-color "#505050"
+        urgent-color "#9b0000"
+    }
+    
+    border {
+        off
+        width 4
+        active-color "#ffc87f"
+        inactive-color "#505050"
+    }
+}
+```
+
+<Accordion title="Width Configuration">
+  Set the thickness of the border in logical pixels.
+
+  <Badge text="Since: 0.1.7" /> You can use fractional values. For example, `width 0.5` on an output with `scale 2` will result in one physical-pixel thick borders.
+
+  ```kdl
+  layout {
+      border {
+          width 2
+      }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Colors">
+  Colors can be set in a variety of ways:
+  - CSS named colors: `"red"`
+  - RGB hex: `"#rgb"`, `"#rgba"`, `"#rrggbb"`, `"#rrggbbaa"`
+  - CSS-like notation: `"rgb(255, 127, 0)"`, `"rgba()"`, `"hsl()"` and a few others
+
+  ```kdl
+  layout {
+      focus-ring {
+          active-color "#7fc8ff"
+          inactive-color "#505050"
+          urgent-color "#9b0000"
+      }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Gradients">
+  Similarly to colors, you can set `active-gradient` and `inactive-gradient`, which will take precedence.
+
+  Gradients are rendered the same as CSS `linear-gradient(angle, from, to)`. The angle works the same as in `linear-gradient`, and is optional, defaulting to `180`.
+
+  ```kdl
+  layout {
+      focus-ring {
+          active-gradient from="#80c8ff" to="#bbddff" angle=45
+      }
+  }
+  ```
+
+  Gradients can be colored relative to windows individually (the default), or to the whole view of the workspace:
+
+  ```kdl
+  layout {
+      border {
+          active-gradient from="#ffbb66" to="#ffc880" angle=45 relative-to="workspace-view"
+          inactive-gradient from="#505050" to="#808080" angle=45 relative-to="workspace-view"
+      }
+  }
+  ```
+
+  <Badge text="Since: 0.1.8" /> You can set the gradient interpolation color space:
+
+  ```kdl
+  layout {
+      border {
+          active-gradient from="#f00f" to="#0f05" angle=45 in="oklch longer hue"
+      }
+  }
+  ```
+
+  Supported color spaces: `srgb` (default), `srgb-linear`, `oklab`, `oklch` with hue interpolation options.
+</Accordion>
+
+<Note>
+  By default, focus ring and border are rendered as a solid background rectangle behind windows. That is, they will show up through semitransparent windows.
+  
+  If you don't like that, you should uncomment the `prefer-no-csd` setting at the top level of the config.
+</Note>
+
+### Shadow
+
+<Badge text="Since: 25.02" />
+
+Shadow rendered behind a window.
+
+```kdl
+layout {
+    shadow {
+        on
+        softness 30
+        spread 5
+        offset x=0 y=5
+        color "#00000070"
+    }
+}
+```
+
+<ParamField path="softness" type="number" default="30">
+  Controls the shadow softness/size in logical pixels, same as CSS box-shadow blur radius. Setting `softness 0` will give you hard shadows.
+</ParamField>
+
+<ParamField path="spread" type="number" default="5">
+  Distance to expand the window rectangle in logical pixels, same as CSS box-shadow spread. <Badge text="Since: 25.05" /> Spread can be negative.
+</ParamField>
+
+<ParamField path="offset" type="x/y coordinates">
+  Moves the shadow relative to the window in logical pixels. For example, `offset x=2 y=2` will move the shadow 2 logical pixels downwards and to the right.
+</ParamField>
+
+<ParamField path="draw-behind-window" type="boolean" default="false">
+  Set to `true` to make shadows draw behind the window rather than just around it. This fixes shadow artifacts inside CSD rounded corners.
+</ParamField>
+
+<ParamField path="color" type="color">
+  The shadow color and opacity.
+</ParamField>
+
+<ParamField path="inactive-color" type="color">
+  Override the shadow color for inactive windows. By default, a more transparent `color` is used.
+</ParamField>
+
+### Tab Indicator
+
+<Badge text="Since: 25.02" />
+
+Controls the appearance of the tab indicator that appears next to columns in tabbed display mode.
+
+```kdl
+layout {
+    tab-indicator {
+        on
+        hide-when-single-tab
+        place-within-column
+        gap 5
+        width 4
+        length total-proportion=1.0
+        position "right"
+        gaps-between-tabs 2
+        corner-radius 8
+        active-color "red"
+        inactive-color "gray"
+    }
+}
+```
+
+<ParamField path="hide-when-single-tab" type="flag">
+  Hide the indicator for tabbed columns that only have a single window
+</ParamField>
+
+<ParamField path="place-within-column" type="flag">
+  Put the tab indicator "within" the column, rather than outside. This will include it in column sizing and avoid overlaying adjacent columns.
+</ParamField>
+
+<ParamField path="gap" type="number" default="5">
+  Gap between the tab indicator and the window in logical pixels. Can be negative to put the indicator on top of the window.
+</ParamField>
+
+<ParamField path="width" type="number" default="4">
+  Thickness of the indicator in logical pixels
+</ParamField>
+
+<ParamField path="length" type="total-proportion">
+  Controls the length of the indicator. Set the `total-proportion` property to make tabs take up this much length relative to the window size.
+</ParamField>
+
+<ParamField path="position" type="string" default="right">
+  Position of the tab indicator relative to the window: `left`, `right`, `top`, or `bottom`
+</ParamField>
+
+### Insert Hint
+
+<Badge text="Since: 0.1.10" />
+
+Settings for the window insert position hint during an interactive window move.
+
+```kdl
+layout {
+    insert-hint {
+        color "#ffc87f80"
+        gradient from="#ffbb6680" to="#ffc88080" angle=45 relative-to="workspace-view"
+    }
+}
+```
+
+<ParamField path="off" type="flag">
+  Disables the insert hint altogether
+</ParamField>
+
+## Struts
+
+Struts shrink the area occupied by windows, similarly to layer-shell panels. You can think of them as a kind of outer gaps. They are set in logical pixels.
+
+```kdl
+layout {
+    struts {
+        left 64
+        right 64
+        top 64
+        bottom 64
+    }
+}
+```
+
+<Info>
+  Left and right struts will cause the next window to the side to always peek out slightly. Top and bottom struts will simply add outer gaps in addition to the area occupied by layer-shell panels and regular gaps.
+</Info>
+
+<Badge text="Since: 0.1.7" /> You can use fractional values.
+
+<Badge text="Since: 0.1.8" /> You can use negative values. They will push the windows outwards, even outside the edges of the screen.
+
+<Accordion title="Inner vs. Outer Gaps">
+  You can use negative struts with matching gaps value to emulate "inner" vs. "outer" gaps. For example, use this for inner gaps without outer gaps:
+
+  ```kdl
+  layout {
+      gaps 16
+
+      struts {
+          left -16
+          right -16
+          top -16
+          bottom -16
+      }
+  }
+  ```
+</Accordion>
+
+## Background Color
+
+<Badge text="Since: 25.05" />
+
+Set the default background color that niri draws for workspaces. This is visible when you're not using any background tools like swaybg.
+
+```kdl
+layout {
+    background-color "#003300"
+}
+```
+
+<Info>
+  You can also set the color per-output in the output config.
+</Info>

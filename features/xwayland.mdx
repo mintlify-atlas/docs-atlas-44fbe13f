@@ -1,0 +1,266 @@
+---
+title: Xwayland
+description: Running X11 applications in niri using xwayland-satellite and other methods
+---
+
+## Using xwayland-satellite
+
+<Note>
+Available since version 25.08
+</Note>
+
+Niri integrates with [xwayland-satellite](https://github.com/Supreeeme/xwayland-satellite) out of the box.
+
+### Automatic Integration
+
+With no configuration, niri will:
+
+1. Create X11 sockets on disk
+2. Export `$DISPLAY`
+3. Spawn xwayland-satellite on-demand when an X11 client connects
+4. Automatically restart xwayland-satellite if it dies
+
+<Steps>
+  <Step title="Install xwayland-satellite">
+    Ensure xwayland-satellite >= 0.7 is installed and available in `$PATH`.
+  </Step>
+  
+  <Step title="Remove Custom Config">
+    If you had a custom config which manually started `xwayland-satellite` and set `$DISPLAY`, you should remove those customizations for the automatic integration to work.
+  </Step>
+  
+  <Step title="Verify Integration">
+    Check that niri is listening on the X11 socket:
+    
+    ```bash
+    journalctl --user-unit=niri -b
+    ```
+    
+    You should see:
+    
+    ```
+    niri[2474]: 2025-08-29T04:07:40.690512Z  INFO niri: listening on Wayland socket: wayland-1
+    niri[2474]: 2025-08-29T04:07:40.690520Z  INFO niri: IPC listening on: /run/user/1000/niri.wayland-1.2474.sock
+    niri[2474]: 2025-08-29T04:07:40.700137Z  INFO niri: listening on X11 socket: :0
+    ```
+    
+    Verify `$DISPLAY` is set:
+    
+    ```bash
+    echo $DISPLAY
+    # Output: :0
+    ```
+  </Step>
+</Steps>
+
+![xwayland-satellite running Steam and Half-Life](https://github.com/user-attachments/assets/57db8f96-40d4-4621-a389-373c169349a4)
+
+### Why xwayland-satellite?
+
+We're using xwayland-satellite rather than Xwayland directly because [X11 is very cursed](/troubleshooting/faq#why-doesnt-niri-integrate-xwayland-like-other-compositors). xwayland-satellite takes on the bulk of the work dealing with the X11 peculiarities from us, giving niri normal Wayland windows to manage.
+
+<Warning>
+xwayland-satellite works well with most applications (Steam, games, Discord, even wine Windows VST plugins), but X11 apps that want to position windows or bars at specific screen coordinates won't behave correctly and will need a nested compositor to run.
+</Warning>
+
+## Using the labwc Wayland Compositor
+
+[Labwc](https://github.com/labwc/labwc) is a traditional stacking Wayland compositor with Xwayland. You can run it as a window, then run X11 apps inside.
+
+<Steps>
+  <Step title="Install labwc">
+    Install labwc from your distribution packages.
+  </Step>
+  
+  <Step title="Run labwc">
+    Run it inside niri with the `labwc` command. It will open as a new window.
+    
+    ```bash
+    labwc
+    ```
+  </Step>
+  
+  <Step title="Run X11 Applications">
+    Run an X11 application on the X11 DISPLAY that it provides:
+    
+    ```bash
+    env DISPLAY=:0 glxgears
+    ```
+  </Step>
+</Steps>
+
+![Labwc running X11 apps](https://github.com/user-attachments/assets/aecbcecb-f0cb-4909-867f-09d34b5a2d7e)
+
+## Directly Running Xwayland in Rootful Mode
+
+This method involves invoking Xwayland directly and running it as its own window. It also requires an extra X11 window manager running inside it.
+
+![Xwayland running in rootful mode](https://github.com/niri-wm/niri/assets/1794388/b64e96c4-a0bb-4316-94a0-ff445d4c7da7)
+
+<Steps>
+  <Step title="Start Xwayland">
+    Run `Xwayland` (just the binary on its own without flags):
+    
+    ```bash
+    Xwayland
+    ```
+    
+    This will spawn a black window which you can resize and fullscreen (with `Mod+Shift+F`).
+    
+    <Note>
+    On older Xwayland versions the window will be screen-sized and non-resizable.
+    </Note>
+  </Step>
+  
+  <Step title="Run X11 Window Manager">
+    Run an X11 window manager inside Xwayland:
+    
+    ```bash
+    env DISPLAY=:0 i3
+    ```
+    
+    This way you can manage X11 windows inside the Xwayland instance.
+  </Step>
+  
+  <Step title="Run X11 Applications">
+    Run your X11 applications:
+    
+    ```bash
+    env DISPLAY=:0 flatpak run com.valvesoftware.Steam
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+If you don't run an X11 window manager, Xwayland will close and re-open its window every time all X11 windows close and a new one opens. To prevent this, start an X11 WM inside as mentioned above, or open some other long-running X11 window.
+</Tip>
+
+### Clipboard Sharing
+
+<Warning>
+Currently rootful Xwayland doesn't seem to share clipboard with the compositor.
+</Warning>
+
+For textual data you can do it manually using [wl-clipboard](https://github.com/bugaevc/wl-clipboard):
+
+```bash
+# Copy from Xwayland to niri clipboard
+env DISPLAY=:0 xsel -ob | wl-copy
+
+# Copy from niri to Xwayland clipboard
+wl-paste -n | env DISPLAY=:0 xsel -ib
+```
+
+### Hotkey Bindings
+
+You can bind these to hotkeys:
+
+```kdl
+binds {
+    Mod+Shift+C { spawn "sh" "-c" "env DISPLAY=:0 xsel -ob | wl-copy"; }
+    Mod+Shift+V { spawn "sh" "-c" "wl-paste -n | env DISPLAY=:0 xsel -ib"; }
+}
+```
+
+## Using xwayland-run
+
+[xwayland-run](https://gitlab.freedesktop.org/ofourdan/xwayland-run) is a helper utility to run an X11 client within a dedicated Xwayland rootful server. It takes care of starting Xwayland, setting the X11 DISPLAY environment variable, setting up xauth and running the specified X11 client.
+
+When the X11 client terminates, xwayland-run will automatically close the dedicated Xwayland server.
+
+### Usage
+
+```bash
+xwayland-run <Xwayland arguments> -- your-x11-app <X11 app arguments>
+```
+
+### Example
+
+```bash
+xwayland-run -geometry 800x600 -fullscreen -- wine wingame.exe
+```
+
+## Using the Cage Wayland Compositor
+
+It is also possible to run the X11 application in [Cage](https://github.com/cage-kiosk/cage), which runs a nested Wayland session which also supports Xwayland.
+
+<Warning>
+Cage is meant for kiosks, so every new window will be automatically full-screened and take over the previously opened window. This can cause issues if multiple windows are launched inside Cage.
+</Warning>
+
+### Setup
+
+<Steps>
+  <Step title="Install Cage">
+    Install `cage` from your distribution repositories:
+    
+    ```bash
+    # Most distributions have cage in their repos
+    sudo dnf install cage  # Fedora
+    sudo apt install cage  # Debian/Ubuntu
+    ```
+  </Step>
+  
+  <Step title="Run Application">
+    Run your X11 application with Cage:
+    
+    ```bash
+    cage -- /path/to/application
+    ```
+  </Step>
+</Steps>
+
+### Desktop Entry Modification
+
+Optionally, you can modify the desktop entry for the application and add the `cage --` prefix to the `Exec` property. For example, the Spotify Flatpak would look like:
+
+```ini
+[Desktop Entry]
+Type=Application
+Name=Spotify
+GenericName=Online music streaming service
+Comment=Access all of your favorite music
+Icon=com.spotify.Client
+Exec=cage -- flatpak run com.spotify.Client
+Terminal=false
+```
+
+## Proton-GE Native Wayland
+
+It's possible to run some games as native Wayland clients, sidestepping the issues related to X11. You can do it with a custom version of Proton like [Proton-GE](https://github.com/GloriousEggroll/proton-ge-custom) by setting the `PROTON_ENABLE_WAYLAND=1` environmental variable in the game's launch parameters.
+
+<Warning>
+This is an experimental feature, might not work with every game and might have its own issues.
+</Warning>
+
+### Steam Launch Options
+
+```bash
+PROTON_ENABLE_WAYLAND=1 %command%
+```
+
+## Using gamescope
+
+You can use [gamescope](https://github.com/ValveSoftware/gamescope) to run X11 games and even Steam itself.
+
+<Note>
+Similar to Cage, gamescope will only show a single, topmost window, so it's not very suitable for running regular apps. But you can run Steam in gamescope and then start games from Steam just fine.
+</Note>
+
+### Basic Usage
+
+```bash
+gamescope -- flatpak run com.valvesoftware.Steam
+```
+
+### Fullscreen Mode
+
+To run gamescope fullscreen, pass flags that set the necessary resolution:
+
+```bash
+gamescope -W 2560 -H 1440 -w 2560 -h 1440 -f -- flatpak run com.valvesoftware.Steam
+```
+
+<Warning>
+If Steam terminates abnormally while running in gamescope, subsequent gamescope invocations will sometimes fail to start it properly. If this happens, run Steam inside a rootful Xwayland as described above, then exit it normally, and then you will be able to use gamescope again.
+</Warning>

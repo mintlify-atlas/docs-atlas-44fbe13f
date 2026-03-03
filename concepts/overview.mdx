@@ -1,0 +1,143 @@
+---
+title: Overview
+description: A zoomed-out view of your workspaces and windows for easier navigation
+---
+
+<Note>
+Available since version 25.05
+</Note>
+
+The Overview is a zoomed-out view of your workspaces and windows.
+It lets you see what's going on at a glance, navigate, and drag windows around.
+
+## Opening the Overview
+
+You can open the overview in three ways:
+
+- Use the `toggle-overview` bind
+- Click the top-left hot corner
+- Use a touchpad four-finger swipe up
+
+## Navigation in Overview
+
+While in the overview, all keyboard shortcuts keep working, while pointing devices get easier:
+
+<Tabs>
+  <Tab title="Mouse">
+    - **Left click and drag** - Move windows
+    - **Right click and drag** - Scroll workspaces left/right
+    - **Scroll wheel** - Switch workspaces (no holding Mod required)
+  </Tab>
+  <Tab title="Touchpad">
+    - **Two-finger scrolling** - Matches the normal three-finger gestures
+  </Tab>
+  <Tab title="Touchscreen">
+    - **One-finger scrolling** - Navigate workspaces
+    - **One-finger long press** - Move a window
+  </Tab>
+</Tabs>
+
+## Layer Shell Behavior
+
+<Info>
+The overview needs to draw a background under every workspace.
+
+Layer-shell surfaces work this way:
+- The **background** and **bottom** layers zoom out together with the workspaces
+- The **top** and **overlay** layers remain on top of the overview
+
+**Put your bar on the top layer.**
+</Info>
+
+## Drag-and-Drop Features
+
+Drag-and-drop will scroll the workspaces up/down in the overview, and will activate a workspace when holding it for a moment.
+Combined with the hot corner, this lets you do a mouse-only DnD across workspaces.
+
+<Tip>
+You can also drag-and-drop a window to a new workspace above, below, or between existing workspaces.
+</Tip>
+
+## Configuration
+
+### Zoom Level
+
+You can set the zoom-out level like this:
+
+```kdl
+// Make workspaces four times smaller than normal in the overview.
+overview {
+    zoom 0.25
+}
+```
+
+### Backdrop Color
+
+To change the color behind the workspaces, use the `backdrop-color` setting:
+
+```kdl
+// Make the backdrop light.
+overview {
+    backdrop-color "#777777"
+}
+```
+
+### Disable Hot Corner
+
+You can also disable the hot corner:
+
+```kdl
+// Disable the hot corners.
+gestures {
+    hot-corners {
+        off
+    }
+}
+```
+
+## Backdrop Customization
+
+<Accordion title="Using Layer-Shell Wallpaper">
+Apart from setting a custom backdrop color, you can also put a layer-shell wallpaper into the backdrop with a layer rule:
+
+```kdl
+// Put swaybg inside the overview backdrop.
+layer-rule {
+    match namespace="^wallpaper$"
+    place-within-backdrop true
+}
+```
+
+This will only work for **background** layer surfaces that ignore exclusive zones (typical for wallpaper tools).
+</Accordion>
+
+<Accordion title="Multiple Wallpaper Tools">
+You can run two different wallpaper tools (like swaybg and awww), one for the backdrop and one for the normal workspace background.
+This way you could set the backdrop one to a blurred version of the wallpaper for a nice effect.
+</Accordion>
+
+<Accordion title="Stationary Wallpaper">
+You can combine this with a transparent background color if you don't like the wallpaper moving together with workspaces:
+
+```kdl
+// Make the wallpaper stationary, rather than moving with workspaces.
+layer-rule {
+    // This is for swaybg; change for other wallpaper tools.
+    // Find the right namespace by running niri msg layers.
+    match namespace="^wallpaper$"
+    place-within-backdrop true
+}
+
+// Set transparent workspace background color.
+layout {
+    background-color "transparent"
+}
+
+// Optionally, disable the workspace shadows in the overview.
+overview {
+    workspace-shadow {
+        off
+    }
+}
+```
+</Accordion>

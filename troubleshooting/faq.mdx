@@ -1,0 +1,228 @@
+---
+title: Frequently Asked Questions
+description: Common questions and answers about using niri
+---
+
+Frequently asked questions about niri configuration, features, and usage.
+
+## Window Appearance
+
+<AccordionGroup>
+  <Accordion title="How to disable client-side decorations/make windows rectangular?">
+    Uncomment the `prefer-no-csd` setting at the top level of your config, then restart your apps:
+
+    ```kdl
+    prefer-no-csd
+    ```
+
+    Niri will ask windows to omit client-side decorations and inform them that they are being tiled (which makes some windows rectangular, even if they cannot omit the decorations).
+
+    <Note>
+    This will currently prevent edge window resize handles from showing up. You can still resize windows by holding Mod and the right mouse button.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Why are transparent windows tinted? Why is the border/focus ring showing through?">
+    Uncomment the `prefer-no-csd` setting at the top level of your config, then restart your apps:
+
+    ```kdl
+    prefer-no-csd
+    ```
+
+    Niri will draw focus rings and borders **around** windows that agree to omit their client-side decorations.
+
+    By default, focus ring and border are rendered as a solid background rectangle behind windows. They will show up through semitransparent windows because windows using client-side decorations can have an arbitrary shape.
+
+    You can also override this behavior with the `draw-border-with-background` window rule.
+  </Accordion>
+
+  <Accordion title="How to enable rounded corners for all windows?">
+    Add this window rule to your config:
+
+    ```kdl
+    window-rule {
+        geometry-corner-radius 12
+        clip-to-geometry true
+    }
+    ```
+
+    Adjust the radius value to your preference.
+  </Accordion>
+
+  <Accordion title="Why does Firefox or Thunderbird have 1 px smaller border?">
+    They draw their own 1 px dark border around the window, which obscures one pixel of niri's border.
+
+    **Solution:** Set the `clip-to-geometry true` window rule:
+
+    ```kdl
+    window-rule {
+        match app-id="firefox"
+        clip-to-geometry true
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## User Interface
+
+<AccordionGroup>
+  <Accordion title="How to hide the 'Important Hotkeys' pop-up at the start?">
+    Add this to your config:
+
+    ```kdl
+    hotkey-overlay {
+        skip-at-startup
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## X11 and Xwayland
+
+<AccordionGroup>
+  <Accordion title="How to run X11 apps like Steam or Discord?">
+    To run X11 apps, use [xwayland-satellite](https://github.com/Supreeeme/xwayland-satellite). Check the Xwayland documentation page for detailed instructions.
+
+    <Tip>
+    Many Electron apps such as VSCode or Discord can run natively on Wayland by passing the right flags. See the Application Issues page for details.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Why doesn't niri integrate Xwayland like other compositors?">
+    A combination of factors:
+
+    - Integrating Xwayland is quite a bit of work, as the compositor needs to implement parts of an X11 window manager
+    - You need to appease X11 ideas of windowing, whereas niri aims to have the best code for Wayland
+    - Niri doesn't have a good global coordinate system required by X11
+    - X11 tends to generate an endless stream of bugs that take time away from other tasks
+    - There aren't actually that many X11-only clients nowadays, and xwayland-satellite handles most of those well
+    - Niri isn't a Big Serious Desktop Environment which Must Support All Use Cases
+
+    <Note>
+    Since version 25.08, niri has seamless built-in xwayland-satellite integration that works as well as built-in Xwayland in other compositors, solving the hurdle of manual setup.
+    </Note>
+
+    It's possible that xwayland-satellite may become the standard way of integrating Xwayland into new compositors, since it takes on the bulk of the annoying work and isolates the compositor from misbehaving clients.
+  </Accordion>
+</AccordionGroup>
+
+## Features and Effects
+
+<AccordionGroup>
+  <Accordion title="Can I enable blur behind semitransparent windows?">
+    Not yet in the stable release. Follow/upvote [this issue](https://github.com/niri-wm/niri/issues/54) for progress.
+
+    There's also [a PR](https://github.com/niri-wm/niri/pull/1634) adding blur to niri which you can build and run manually.
+
+    <Warning>
+    The PR is an experimental implementation that may have problems and performance concerns.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Can I make a window sticky/pinned/always on top/appear on all workspaces?">
+    Not yet in the stable release. Follow/upvote [this issue](https://github.com/niri-wm/niri/issues/932) for progress.
+
+    You can emulate this with a script that uses the niri IPC. For example, [nirius](https://git.sr.ht/~tsdh/nirius) has a `toggle-follow-mode` feature.
+  </Accordion>
+</AccordionGroup>
+
+## Window Placement
+
+<AccordionGroup>
+  <Accordion title="How do I make the Bitwarden window in Firefox open as floating?">
+    Firefox first opens the Bitwarden window with a generic Firefox title, and only later changes it to Bitwarden, so you can't effectively target it with an `open-floating` window rule.
+
+    **Solution:** Use a script, for example [this one](https://github.com/niri-wm/niri/discussions/1599). Search niri issues and discussions for other Bitwarden solutions.
+  </Accordion>
+
+  <Accordion title="Can I open a window directly in the current column/in the same column as another window?">
+    Not built into niri directly, but you can script this behavior with the niri IPC.
+
+    Listen to the event stream for a new window opening, then call an action like `consume-or-expel-window-left`.
+
+    Adding this directly to niri is challenging:
+    - Computing exact initial window sizes in relation to other windows in a column is complex
+    - Edge cases need handling (column disappearing, new windows added before target window appears)
+    - It's unclear what kind of simple setting would be useful for different user needs (parent PID rules, etc.)
+
+    See also [this discussion](https://github.com/niri-wm/niri/discussions/1125) for more context.
+  </Accordion>
+</AccordionGroup>
+
+## Input and Focus
+
+<AccordionGroup>
+  <Accordion title="Why does moving the mouse against a monitor edge focus the next window, but only sometimes?">
+    This can happen with `focus-follows-mouse`. When using client-side decorations, windows have margins outside their geometry for mouse resizing handles. These margins "peek out" of the monitor edges and trigger `focus-follows-mouse` when the mouse crosses them.
+
+    **Why it doesn't always happen:**
+    - Some toolkits don't put resize handles outside the window geometry
+    - If the current window has its own margin extending to the monitor edge, the mouse never leaves the current window
+
+    **Solutions:**
+
+    **Option 1:** Prevent scrolling-triggered focus changes:
+    ```kdl
+    focus-follows-mouse max-scroll-amount="0%"
+    ```
+
+    **Option 2:** Remove resizing margins:
+    ```kdl
+    prefer-no-csd
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Screen Locking
+
+<AccordionGroup>
+  <Accordion title="How do I recover from a dead screen locker/from a red screen?">
+    When your screen locker dies, you'll see a red screen (niri's locked session background).
+
+    **Recovery Method 1:** Switch TTY and spawn a new locker
+    1. Press Ctrl+Alt+F3 to switch to a different TTY
+    2. Spawn a screen locker to niri's Wayland display:
+       ```bash
+       WAYLAND_DISPLAY=wayland-1 swaylock
+       ```
+
+    **Recovery Method 2:** Allow locker binding when locked
+
+    Set `allow-when-locked=true` on your screen locker bind:
+    ```kdl
+    binds {
+        Super+Alt+L allow-when-locked=true { spawn "swaylock"; }
+    }
+    ```
+
+    Then you can press the keybinding on the red screen to spawn a fresh screen locker.
+  </Accordion>
+</AccordionGroup>
+
+## Output Configuration
+
+<AccordionGroup>
+  <Accordion title="How do I change output configuration based on connected monitors?">
+    If you need different output configurations depending on what outputs are connected, use [Kanshi](https://gitlab.freedesktop.org/emersion/kanshi).
+
+    Kanshi has its own simple configuration and communicates with niri via IPC.
+
+    **Setup:**
+    1. Launch Kanshi from your niri config:
+       ```kdl
+       spawn-at-startup "/usr/bin/kanshi"
+       ```
+
+    2. Create a Kanshi config. Example for scaling laptop display differently when external monitor is connected:
+       ```
+       profile {
+           output eDP-1 enable scale 1.0
+       }
+
+       profile { 
+           output HDMI-A-1 enable scale 1.0 position 0,0
+           output eDP-1 enable scale 1.25 position 1920,0
+       }
+       ```
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,137 @@
+---
+title: Gestures
+description: Mouse, touchpad, and touchscreen gestures for navigating niri
+---
+
+There are several gestures in niri for different input devices.
+
+<Tip>
+Also see the gestures configuration page for customizing these behaviors.
+</Tip>
+
+## Mouse
+
+### Interactive Move
+
+<Note>
+Available since version 0.1.10
+</Note>
+
+You can move windows by holding `Mod` and the left mouse button.
+
+You can customize the look of the window insertion preview in the `insert-hint` layout config.
+
+<Info>
+**Since version 25.01:** Right click while moving to toggle between floating and tiling layout to put the window into.
+</Info>
+
+### Interactive Resize
+
+<Note>
+Available since version 0.1.6
+</Note>
+
+You can resize windows by holding `Mod` and the right mouse button.
+
+### Reset Window Height
+
+<Note>
+Available since version 0.1.6
+</Note>
+
+If you double-click on a top or bottom tiled window resize edge, the window height will reset to automatic.
+
+<Info>
+This works with both:
+- Window-initiated resizes (when using client-side decorations)
+- Niri-initiated `Mod` + right click resizes
+</Info>
+
+### Toggle Full Width
+
+<Note>
+Available since version 0.1.6
+</Note>
+
+If you double-click on a left or right tiled window resize edge, the column will expand to the full workspace width.
+
+<Info>
+This works with both:
+- Window-initiated resizes (when using client-side decorations)
+- Niri-initiated `Mod` + right click resizes
+</Info>
+
+### Horizontal View Movement
+
+<Note>
+Available since version 0.1.6
+</Note>
+
+Move the view horizontally by holding `Mod` and the middle mouse button (or the wheel) and dragging the mouse horizontally.
+
+### Workspace Switch
+
+<Note>
+Available since version 0.1.7
+</Note>
+
+Switch workspaces by holding `Mod` and the middle mouse button (or the wheel) and dragging the mouse vertically.
+
+## Touchpad
+
+<CardGroup cols={2}>
+  <Card title="Workspace Switch" icon="arrows-up-down">
+    Switch workspaces with three-finger vertical swipes
+  </Card>
+  <Card title="Horizontal View Movement" icon="arrows-left-right">
+    Move the view horizontally with three-finger horizontal swipes
+  </Card>
+</CardGroup>
+
+### Open and Close the Overview
+
+<Note>
+Available since version 25.05
+</Note>
+
+Open and close the overview with a four-finger vertical swipe.
+
+## All Pointing Devices
+
+<Accordion title="Drag-and-Drop Edge View Scroll">
+<Note>
+Available since version 25.02
+</Note>
+
+Scroll the tiling view when moving the mouse cursor against a monitor edge during drag-and-drop (DnD).
+Also works on a touchscreen.
+</Accordion>
+
+<Accordion title="Drag-and-Drop Edge Workspace Switch">
+<Note>
+Available since version 25.05
+</Note>
+
+Scroll the workspaces up/down when moving the mouse cursor against a monitor edge during drag-and-drop (DnD) while in the overview.
+Also works on a touchscreen.
+</Accordion>
+
+<Accordion title="Drag-and-Drop Hold to Activate">
+<Note>
+Available since version 25.05
+</Note>
+
+While drag-and-dropping, hold your mouse over a window to activate it.
+This will bring a floating window to the top for example.
+
+In the overview, you can also hold the mouse over a workspace to switch to it.
+</Accordion>
+
+<Accordion title="Hot Corner to Toggle the Overview">
+<Note>
+Available since version 25.05
+</Note>
+
+Put your mouse at the very top-left corner of a monitor to toggle the overview.
+Also works during drag-and-dropping something.
+</Accordion>

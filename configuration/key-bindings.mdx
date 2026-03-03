@@ -1,0 +1,453 @@
+---
+title: Key Bindings
+description: Configure keyboard shortcuts, mouse bindings, and scroll bindings in niri
+---
+
+## Overview
+
+Key bindings are declared in the `binds {}` section of the config.
+
+<Warning>
+  This is one of the few sections that **does not** get automatically filled with defaults if you omit it, so make sure to copy it from the default config.
+</Warning>
+
+## Basic Syntax
+
+Each bind is a hotkey followed by one action enclosed in curly brackets:
+
+```kdl
+binds {
+    Mod+Left { focus-column-left; }
+    Super+Alt+L { spawn "swaylock"; }
+}
+```
+
+The hotkey consists of modifiers separated by `+` signs, followed by an XKB key name in the end.
+
+### Valid Modifiers
+
+<CardGroup cols={2}>
+  <Card title="Ctrl or Control">
+    Control key
+  </Card>
+  <Card title="Shift">
+    Shift key
+  </Card>
+  <Card title="Alt">
+    Alt key
+  </Card>
+  <Card title="Super or Win">
+    Super/Windows key
+  </Card>
+  <Card title="ISO_Level3_Shift or Mod5">
+    AltGr key on certain layouts
+  </Card>
+  <Card title="ISO_Level5_Shift">
+    Can be used with an xkb lv5 option like `lv5:caps_switch`
+  </Card>
+  <Card title="Mod">
+    Special modifier: `Super` on TTY, `Alt` in nested window
+  </Card>
+</CardGroup>
+
+<Info>
+  `Mod` is a special modifier that is equal to `Super` when running niri on a TTY, and to `Alt` when running niri as a nested winit window. This way, you can test niri in a window without causing too many conflicts with the host compositor's key bindings.
+  
+  <Badge text="Since: 25.05" /> You can customize the `Mod` key in the input section of the config.
+</Info>
+
+### Finding Key Names
+
+<Accordion title="Using wev to find key names">
+  To find an XKB name for a particular key, you may use a program like [`wev`](https://git.sr.ht/~sircmpwn/wev).
+
+  Open it from a terminal and press the key that you want to detect:
+
+  ```
+  [14:     wl_keyboard] key: serial: 757775; time: 44940343; key: 113; state: 1 (pressed)
+                        sym: Left         (65361), utf8: ''
+  [14:     wl_keyboard] key: serial: 757776; time: 44940432; key: 113; state: 0 (released)
+                        sym: Left         (65361), utf8: ''
+  ```
+
+  Here, look at `sym: Left`: this is the key name.
+</Accordion>
+
+<Note>
+  Binding shifted keys requires spelling out Shift and the unshifted version of the key, according to your XKB layout.
+  
+  For example, on US QWERTY, `<` is on Shift + `,`, so to bind it, you spell out `Mod+Shift+Comma`.
+</Note>
+
+## Bind Properties
+
+### Repeat
+
+<Badge text="Since: 0.1.8" />
+
+Binds will repeat by default (i.e. holding down a bind will make it trigger repeatedly). You can disable that for specific binds:
+
+```kdl
+binds {
+    Mod+T repeat=false { spawn "alacritty"; }
+}
+```
+
+### Cooldown
+
+Binds can also have a cooldown, which will rate-limit the bind and prevent it from repeatedly triggering too quickly.
+
+```kdl
+binds {
+    Mod+T cooldown-ms=500 { spawn "alacritty"; }
+}
+```
+
+<Info>
+  This is mostly useful for the scroll bindings.
+</Info>
+
+### Allow When Locked
+
+<Badge text="Since: 0.1.5" />
+
+Spawn bindings have a special `allow-when-locked=true` property that makes them work even while the session is locked:
+
+```kdl
+binds {
+    // This mute bind will work even when the session is locked.
+    XF86AudioMute allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+}
+```
+
+### Allow Inhibiting
+
+<Badge text="Since: 25.02" />
+
+You can make certain binds ignore inhibiting with the `allow-inhibiting=false` property. They will always be handled by niri and never passed to the window.
+
+```kdl
+binds {
+    // This bind will always work, even when using a virtual machine.
+    Super+Alt+L allow-inhibiting=false { spawn "swaylock"; }
+}
+```
+
+## Scroll Bindings
+
+You can bind mouse wheel scroll ticks using the following syntax. These binds will change direction based on the `natural-scroll` setting.
+
+```kdl
+binds {
+    Mod+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp   cooldown-ms=150 { focus-workspace-up; }
+    Mod+WheelScrollRight                { focus-column-right; }
+    Mod+WheelScrollLeft                 { focus-column-left; }
+}
+```
+
+Similarly, you can bind touchpad scroll "ticks". Touchpad scrolling is continuous, so for these binds it is split into discrete intervals based on distance travelled.
+
+```kdl
+binds {
+    Mod+TouchpadScrollDown { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.02+"; }
+    Mod+TouchpadScrollUp   { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.02-"; }
+}
+```
+
+<Warning>
+  Both mouse wheel and touchpad scroll binds will prevent applications from receiving any scroll events when their modifiers are held down. For example, if you have a `Mod+WheelScrollDown` bind, then while holding `Mod`, all mouse wheel scrolling will be consumed by niri.
+</Warning>
+
+## Mouse Click Bindings
+
+<Badge text="Since: 25.01" />
+
+You can bind mouse clicks using the following syntax:
+
+```kdl
+binds {
+    Mod+MouseLeft    { close-window; }
+    Mod+MouseRight   { close-window; }
+    Mod+MouseMiddle  { close-window; }
+    Mod+MouseForward { close-window; }
+    Mod+MouseBack    { close-window; }
+}
+```
+
+<Info>
+  Mouse clicks operate on the window that was focused at the time of the click, not the window you're clicking.
+</Info>
+
+<Note>
+  Binding `Mod+MouseLeft` or `Mod+MouseRight` will override the corresponding gesture (moving or resizing the window).
+</Note>
+
+## Custom Hotkey Overlay Titles
+
+<Badge text="Since: 25.02" />
+
+The hotkey overlay (the Important Hotkeys dialog) shows a hardcoded list of binds. You can customize this list using the `hotkey-overlay-title` property.
+
+### Adding Custom Binds
+
+```kdl
+binds {
+    Mod+Shift+S hotkey-overlay-title="Toggle Dark/Light Style" { spawn "some-script.sh"; }
+}
+```
+
+### Removing Binds
+
+```kdl
+binds {
+    Mod+Q hotkey-overlay-title=null { close-window; }
+}
+```
+
+<Accordion title="Pango Markup Support">
+  Custom titles support [Pango markup](https://docs.gtk.org/Pango/pango_markup.html):
+
+  ```kdl
+  binds {
+      Mod+Shift+S hotkey-overlay-title="<b>Toggle</b> <span foreground='red'>Dark</span>/Light Style" { spawn "some-script.sh"; }
+  }
+  ```
+</Accordion>
+
+## Key Actions
+
+Every action that you can bind is also available for programmatic invocation via `niri msg action`.
+
+```bash
+niri msg action
+```
+
+This will show a full list of actions along with their short descriptions.
+
+### spawn
+
+Run a program.
+
+```kdl
+binds {
+    // Run alacritty.
+    Mod+T { spawn "alacritty"; }
+
+    // Run `wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1+`.
+    XF86AudioRaiseVolume { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1+"; }
+}
+```
+
+<Warning>
+  For `spawn`, niri **does not** use a shell to run commands, which means that you need to manually separate arguments.
+  
+  ```kdl
+  // Correct: every argument is in its own quotes.
+  Mod+T { spawn "alacritty" "-e" "/usr/bin/fish"; }
+
+  // Wrong: will interpret the whole string as the binary path.
+  Mod+D { spawn "alacritty -e /usr/bin/fish"; }
+  ```
+</Warning>
+
+<Accordion title="Shell Expansion">
+  This also means that you cannot expand environment variables or `~`. If you need this, you can run the command through a shell manually.
+
+  ```kdl
+  binds {
+      // Wrong: no shell expansion here.
+      Mod+T { spawn "grim" "-o" "$MAIN_OUTPUT" "~/screenshot.png"; }
+
+      // Correct: run through a shell for expansion.
+      Mod+D { spawn "sh" "-c" "grim -o $MAIN_OUTPUT ~/screenshot.png"; }
+  }
+  ```
+
+  As a special case, niri will expand `~` to the home directory **only** at the beginning of the program name:
+
+  ```kdl
+  binds {
+      Mod+T { spawn "~/scripts/do-something.sh"; }
+  }
+  ```
+</Accordion>
+
+### spawn-sh
+
+<Badge text="Since: 25.08" />
+
+Run a command through the shell. The argument is a single string that is passed verbatim to `sh`.
+
+```kdl
+binds {
+    // Works: all arguments in the same string.
+    Mod+D { spawn-sh "alacritty -e /usr/bin/fish"; }
+
+    // Works: shell variable ($MAIN_OUTPUT), ~ expansion.
+    Mod+T { spawn-sh "grim -o $MAIN_OUTPUT ~/screenshot.png"; }
+
+    // Works: process substitution.
+    Mod+Q { spawn-sh "notify-send clipboard \"$(wl-paste)\""; }
+
+    // Works: multiple commands.
+    Super+Alt+S { spawn-sh "pkill orca || exec orca"; }
+}
+```
+
+<Info>
+  `spawn-sh "some command"` is equivalent to `spawn "sh" "-c" "some command"`—it's just a less confusing shorthand.
+  
+  Keep in mind that going through the shell incurs a tiny performance penalty compared to directly `spawn`ing some binary.
+</Info>
+
+### quit
+
+Exit niri after showing a confirmation dialog to avoid accidentally triggering it.
+
+```kdl
+binds {
+    Mod+Shift+E { quit; }
+}
+```
+
+If you want to skip the confirmation dialog:
+
+```kdl
+binds {
+    Mod+Shift+E { quit skip-confirmation=true; }
+}
+```
+
+### screenshot, screenshot-screen, screenshot-window
+
+Actions for taking screenshots.
+
+- `screenshot`: opens the built-in interactive screenshot UI
+- `screenshot-screen`: takes a screenshot of the focused screen
+- `screenshot-window`: takes a screenshot of the focused window
+
+```kdl
+binds {
+    Print { screenshot; }
+    Ctrl+Print { screenshot-screen; }
+    Alt+Print { screenshot-window; }
+}
+```
+
+The screenshot is both stored to the clipboard and saved to disk.
+
+<Accordion title="Advanced Screenshot Options">
+  <ParamField path="write-to-disk" type="boolean" default="true">
+    <Badge text="Since: 25.02" /> Disable saving to disk for a specific bind:
+    
+    ```kdl
+    binds {
+        Ctrl+Print { screenshot-screen write-to-disk=false; }
+    }
+    ```
+  </ParamField>
+
+  <ParamField path="show-pointer" type="boolean" default="true">
+    <Badge text="Since: 25.05" /> Hide the mouse pointer in screenshots:
+    
+    ```kdl
+    binds {
+        Print { screenshot show-pointer=false; }
+    }
+    ```
+  </ParamField>
+
+  In the interactive screenshot UI, pressing Ctrl+C will copy the screenshot to the clipboard without writing it to disk.
+</Accordion>
+
+### toggle-keyboard-shortcuts-inhibit
+
+<Badge text="Since: 25.02" />
+
+Applications such as remote-desktop clients and software KVM switches may request that niri stops processing its keyboard shortcuts. `toggle-keyboard-shortcuts-inhibit` is an escape hatch that toggles the inhibitor.
+
+```kdl
+binds {
+    Mod+Escape { toggle-keyboard-shortcuts-inhibit; }
+}
+```
+
+<Info>
+  It's a good idea to bind this, so a buggy application can't hold your session hostage.
+</Info>
+
+### do-screen-transition
+
+<Badge text="Since: 0.1.6" />
+
+Freeze the screen for a brief moment then crossfade to the new contents.
+
+```kdl
+binds {
+    Mod+Return { do-screen-transition; }
+}
+```
+
+This action is mainly useful to trigger from scripts changing the system theme or style (between light and dark for example).
+
+```bash
+niri msg action do-screen-transition
+dconf write /org/gnome/desktop/interface/color-scheme "\"prefer-dark\""
+```
+
+You can set the delay:
+
+```kdl
+binds {
+    Mod+Return { do-screen-transition delay-ms=100; }
+}
+```
+
+### toggle-window-rule-opacity
+
+<Badge text="Since: 25.02" />
+
+Toggle the opacity window rule of the focused window. This only has an effect if the window's opacity window rule is already set to semitransparent.
+
+```kdl
+binds {
+    Mod+O { toggle-window-rule-opacity; }
+}
+```
+
+## Example Configuration
+
+Here's a complete example from the default config:
+
+```kdl
+binds {
+    // Show hotkey overlay
+    Mod+Shift+Slash { show-hotkey-overlay; }
+
+    // Programs
+    Mod+T { spawn "alacritty"; }
+    Mod+D { spawn "fuzzel"; }
+    Super+Alt+L { spawn "swaylock"; }
+
+    // Volume keys
+    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1+ -l 1.0"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1-"; }
+    XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
+
+    // Window management
+    Mod+Q { close-window; }
+    Mod+Left  { focus-column-left; }
+    Mod+Right { focus-column-right; }
+    Mod+Up    { focus-window-up; }
+    Mod+Down  { focus-window-down; }
+
+    // Screenshots
+    Print { screenshot; }
+    Ctrl+Print { screenshot-screen; }
+    Alt+Print { screenshot-window; }
+
+    // Quit
+    Mod+Shift+E { quit; }
+}
+```

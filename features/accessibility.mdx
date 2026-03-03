@@ -1,0 +1,170 @@
+---
+title: Accessibility
+description: Screen readers and accessibility features in niri
+---
+
+## Screen Readers
+
+<Note>
+Available since version 25.08
+</Note>
+
+Niri has basic support for screen readers (specifically, [Orca](https://orca.gnome.org)) when running as a full desktop session. You need to start niri through a display manager or through `niri-session`.
+
+<Warning>
+To avoid conflicts with an already running compositor, niri won't expose accessibility interfaces when:
+- Started as a nested window
+- Started as a plain `/usr/bin/niri` on a TTY
+</Warning>
+
+### Implementation
+
+Niri implements the `org.freedesktop.a11y.KeyboardMonitor` D-Bus interface for Orca to listen and grab keyboard keys, and exposes the main niri UI elements via [AccessKit](https://accesskit.dev).
+
+### Announced Elements
+
+Niri will announce the following UI elements through screen readers:
+
+<CardGroup cols={2}>
+  <Card title="Workspace Switching" icon="table-columns">
+    Announces workspace changes (e.g., "Workspace 2")
+  </Card>
+  
+  <Card title="Exit Dialog" icon="door-open">
+    Announces the exit confirmation dialog (Super+Shift+E)
+  </Card>
+  
+  <Card title="Window Switcher" icon="window-restore">
+    Announces selected window titles in Alt+Tab switcher (Since 25.11)
+  </Card>
+  
+  <Card title="Screenshot UI" icon="camera">
+    Announces when screenshot UI and overview are focused
+  </Card>
+  
+  <Card title="Config Errors" icon="triangle-exclamation">
+    Announces config parse errors when they occur
+  </Card>
+  
+  <Card title="Hotkey List" icon="keyboard">
+    Announces important hotkeys (Super+Shift+/)
+  </Card>
+</CardGroup>
+
+### Setting Up Orca
+
+<Steps>
+  <Step title="Verify Xwayland Integration">
+    Make sure [Xwayland](/features/xwayland) works correctly, then run:
+    
+    ```bash
+    orca
+    ```
+  </Step>
+  
+  <Step title="Use Default Toggle Bind">
+    The default config binds `Super+Alt+S` to toggle Orca, which is the standard key binding.
+    
+    ```kdl
+    binds {
+        Mod+Alt+S { spawn "orca"; }
+    }
+    ```
+  </Step>
+  
+  <Step title="Verify X11 Socket">
+    Check that niri is listening on the X11 socket:
+    
+    ```bash
+    journalctl --user-unit=niri -b
+    ```
+    
+    You should see output like:
+    
+    ```
+    niri[2474]: 2025-08-29T04:07:40.700137Z  INFO niri: listening on X11 socket: :0
+    ```
+  </Step>
+</Steps>
+
+### Current Limitations
+
+<Warning>
+The following limitations currently exist:
+</Warning>
+
+- **No layer-shell panel focus**: There's no bind to move focus to layer-shell panels. This feature requires consensus or prior art with LXQt/Xfce.
+- **Screen requirement**: You need a screen connected and enabled. Without a screen, niri won't give focus to any window. Virtual monitors may be a better solution for accessibility purposes.
+- **Hardware acceleration required**: You need working EGL (hardware acceleration).
+- **No screen curtain**: Screen curtain functionality is not yet implemented.
+
+## Distribution Configuration
+
+If you're shipping niri and would like to make it work better for screen readers out of the box, consider these changes:
+
+### Recommended Changes
+
+<AccordionGroup>
+  <Accordion title="Accessible Terminal">
+    Change the default terminal from Alacritty to one that supports screen readers:
+    
+    - [GNOME Console](https://gitlab.gnome.org/GNOME/console)
+    - [GNOME Terminal](https://gitlab.gnome.org/GNOME/gnome-terminal)
+    
+    ```kdl
+    binds {
+        Mod+T { spawn "gnome-console"; }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Accessible Launcher & Locker">
+    Use application launcher and screen locker that support screen readers:
+    
+    - [xfce4-appfinder](https://docs.xfce.org/xfce/xfce4-appfinder/start) - An accessible launcher
+    
+    Most GTK-based applications should work well.
+  </Accordion>
+  
+  <Accordion title="Startup Sound">
+    Add a spawn-at-startup command that plays a sound to indicate niri has finished loading:
+    
+    ```kdl
+    spawn-at-startup "paplay" "/usr/share/sounds/freedesktop/stereo/complete.oga"
+    ```
+  </Accordion>
+  
+  <Accordion title="Auto-start Orca">
+    Automatically run Orca at niri startup:
+    
+    ```kdl
+    spawn-at-startup "orca"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Desktop Zoom
+
+There's no built-in zoom yet, but you can use third-party utilities:
+
+<Card title="wooz" icon="magnifying-glass-plus" href="https://github.com/negrel/wooz">
+  A screen magnification tool for Wayland compositors
+</Card>
+
+### Usage Example
+
+```bash
+# Install wooz
+# Check your distribution's package manager
+
+# Run wooz
+wooz
+```
+
+## Demo
+
+Watch this demo video with sound on to see screen reader support in action:
+
+<video controls src="https://github.com/user-attachments/assets/afceba6f-79f1-47ec-b859-a0fcb7f8eae3">
+  Your browser does not support the video tag.
+</video>

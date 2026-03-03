@@ -1,0 +1,536 @@
+---
+title: Window Rules
+description: Configure behavior and appearance for specific windows using matchers and properties
+---
+
+## Overview
+
+Window rules let you adjust behavior for individual windows. They have `match` and `exclude` directives that control which windows the rule should apply to, and a number of properties that you can set.
+
+Window rules are processed in order of appearance in the config file. This means that you can put more generic rules first, then override them for specific windows later.
+
+```kdl
+// Set open-maximized to true for all windows.
+window-rule {
+    open-maximized true
+}
+
+// Then, for Alacritty, set open-maximized back to false.
+window-rule {
+    match app-id="Alacritty"
+    open-maximized false
+}
+```
+
+<Note>
+  In general, you cannot "unset" a property in a later rule, only set it to a different value. Use the `exclude` directives to avoid applying a rule for specific windows.
+</Note>
+
+## Window Matching
+
+Each window rule can have several `match` and `exclude` directives. In order for the rule to apply, a window needs to match **any** of the `match` directives, and **none** of the `exclude` directives.
+
+```kdl
+window-rule {
+    // Match all Telegram windows...
+    match app-id=r#"^org\.telegram\.desktop$"#
+
+    // ...except the media viewer window.
+    exclude title="^Media viewer$"
+
+    // Properties to apply.
+    open-on-output "HDMI-A-1"
+}
+```
+
+### Finding Window Info
+
+You can find the title and the app ID of a window by running:
+
+```bash
+niri msg pick-window
+```
+
+Then click on the window in question.
+
+### Matchers
+
+#### title and app-id
+
+These are regular expressions that should match anywhere in the window title and app ID respectively.
+
+```kdl
+// Match windows with title containing "Mozilla Firefox",
+// or windows with app ID containing "Alacritty".
+window-rule {
+    match title="Mozilla Firefox"
+    match app-id="Alacritty"
+}
+```
+
+<Info>
+  Raw KDL strings can be helpful for writing out regular expressions:
+  
+  ```kdl
+  window-rule {
+      exclude app-id=r#"^org\.keepassxc\.KeePassXC$"#
+  }
+  ```
+</Info>
+
+#### is-active
+
+Can be `true` or `false`. Matches active windows (same windows that have the active border / focus ring color).
+
+```kdl
+window-rule {
+    match is-active=true
+}
+```
+
+<Info>
+  Every workspace on the focused monitor will have one active window. This means that you will usually have multiple active windows.
+</Info>
+
+#### is-focused
+
+Can be `true` or `false`. Matches the window that has the keyboard focus.
+
+```kdl
+window-rule {
+    match is-focused=true
+}
+```
+
+<Info>
+  Contrary to `is-active`, there can only be a single focused window. Also, when opening a layer-shell application launcher or pop-up menu, the keyboard focus goes to layer-shell.
+</Info>
+
+#### is-active-in-column
+
+<Badge text="Since: 0.1.6" />
+
+Can be `true` or `false`. Matches the window that is the "active" window in its column.
+
+```kdl
+window-rule {
+    match is-active-in-column=true
+}
+```
+
+<Info>
+  Contrary to `is-active`, there is always one `is-active-in-column` window in each column. It is the window that was last focused in the column.
+  
+  <Badge text="Since: 25.01" /> This rule will match `true` during the initial window opening.
+</Info>
+
+#### is-floating
+
+<Badge text="Since: 25.01" />
+
+Can be `true` or `false`. Matches floating windows.
+
+```kdl
+window-rule {
+    match is-floating=true
+}
+```
+
+<Warning>
+  This matcher will apply only after the window is already open. This means that you cannot use it to change the window opening properties like `default-window-height` or `open-on-workspace`.
+</Warning>
+
+#### is-window-cast-target
+
+<Badge text="Since: 25.02" />
+
+Can be `true` or `false`. Matches `true` for windows that are target of an ongoing window screencast.
+
+```kdl
+// Indicate screencasted windows with red colors.
+window-rule {
+    match is-window-cast-target=true
+
+    focus-ring {
+        active-color "#f38ba8"
+        inactive-color "#7d0d2d"
+    }
+}
+```
+
+<Note>
+  This only matches individual-window screencasts. It will not match windows that happen to be visible in a monitor screencast.
+</Note>
+
+#### is-urgent
+
+<Badge text="Since: 25.05" />
+
+Can be `true` or `false`. Matches windows that request the user's attention.
+
+```kdl
+window-rule {
+    match is-urgent=true
+}
+```
+
+#### at-startup
+
+<Badge text="Since: 0.1.6" />
+
+Can be `true` or `false`. Matches during the first 60 seconds after starting niri.
+
+```kdl
+// Open windows on the HDMI-A-1 monitor at niri startup, but not afterwards.
+window-rule {
+    match at-startup=true
+    open-on-output "HDMI-A-1"
+}
+```
+
+<Info>
+  This is useful for properties like `open-on-output` which you may want to apply only right after starting niri.
+</Info>
+
+## Window Opening Properties
+
+These properties apply once, when a window first opens.
+
+### default-column-width
+
+Set the default width for the new window. This works for floating windows too, despite the word "column" in the name.
+
+```kdl
+// Give Blender and GIMP some guaranteed width on opening.
+window-rule {
+    match app-id="^blender$"
+    match app-id="^gimp"
+
+    default-column-width { fixed 1200; }
+}
+```
+
+### default-window-height
+
+<Badge text="Since: 25.01" />
+
+Set the default height for the new window.
+
+```kdl
+// Open the Firefox picture-in-picture window as floating with 480×270 size.
+window-rule {
+    match app-id="firefox$" title="^Picture-in-Picture$"
+
+    open-floating true
+    default-column-width { fixed 480; }
+    default-window-height { fixed 270; }
+}
+```
+
+### open-on-output
+
+Make the window open on a specific output.
+
+```kdl
+// Open Firefox and Telegram on a specific monitor.
+window-rule {
+    match app-id="firefox$"
+    match app-id=r#"^org\.telegram\.desktop$"#
+    exclude app-id=r#"^org\.telegram\.desktop$"# title="^Media viewer$"
+
+    open-on-output "HDMI-A-1"
+    // Or:
+    // open-on-output "Some Company CoolMonitor 1234"
+}
+```
+
+<Info>
+  If such an output does not exist, the window will open on the currently focused output as usual.
+  
+  <Badge text="Since: 0.1.9" /> `open-on-output` can now use monitor manufacturer, model, and serial.
+</Info>
+
+### open-on-workspace
+
+<Badge text="Since: 0.1.6" />
+
+Make the window open on a specific named workspace.
+
+```kdl
+// Open Fractal on the "chat" workspace.
+window-rule {
+    match app-id=r#"^org\.gnome\.Fractal$"#
+
+    open-on-workspace "chat"
+}
+```
+
+### open-maximized
+
+Make the window open as a maximized column.
+
+```kdl
+// Maximize Firefox by default.
+window-rule {
+    match app-id="firefox$"
+
+    open-maximized true
+}
+```
+
+### open-maximized-to-edges
+
+<Badge text="Since: 25.11" />
+
+Make the window open maximized to edges.
+
+```kdl
+window-rule {
+    open-maximized-to-edges true
+}
+```
+
+You can also set this to `false` to prevent a window from opening maximized to edges.
+
+### open-fullscreen
+
+Make the window open fullscreen.
+
+```kdl
+window-rule {
+    open-fullscreen true
+}
+```
+
+You can also set this to `false` to prevent a window from opening fullscreen:
+
+```kdl
+// Make the Telegram media viewer open in windowed mode.
+window-rule {
+    match app-id=r#"^org\.telegram\.desktop$"# title="^Media viewer$"
+
+    open-fullscreen false
+}
+```
+
+### open-floating
+
+<Badge text="Since: 25.01" />
+
+Make the window open in the floating layout.
+
+```kdl
+// Open the Firefox picture-in-picture window as floating.
+window-rule {
+    match app-id="firefox$" title="^Picture-in-Picture$"
+
+    open-floating true
+}
+```
+
+### open-focused
+
+<Badge text="Since: 25.01" />
+
+Set this to `false` to prevent this window from being automatically focused upon opening.
+
+```kdl
+// Don't give focus to the GIMP startup splash screen.
+window-rule {
+    match app-id="^gimp" title="^GIMP Startup$"
+
+    open-focused false
+}
+```
+
+## Dynamic Properties
+
+These properties apply continuously to open windows.
+
+### opacity
+
+Set the opacity of the window. `0.0` is fully transparent, `1.0` is fully opaque.
+
+```kdl
+// Make inactive windows semitransparent.
+window-rule {
+    match is-active=false
+
+    opacity 0.95
+}
+```
+
+<Info>
+  Opacity is applied on top of the window's own opacity, so semitransparent windows will become even more transparent.
+  
+  Opacity can be toggled on or off for a window using the `toggle-window-rule-opacity` action.
+</Info>
+
+### block-out-from
+
+You can block out windows from xdg-desktop-portal screencasts. They will be replaced with solid black rectangles.
+
+```kdl
+// Block out password managers from screencasts.
+window-rule {
+    match app-id=r#"^org\.keepassxc\.KeePassXC$"#
+    match app-id=r#"^org\.gnome\.World\.Secrets$"#
+
+    block-out-from "screencast"
+}
+```
+
+Alternatively, you can block out the window from **all** screen captures:
+
+```kdl
+window-rule {
+    block-out-from "screen-capture"
+}
+```
+
+<Warning>
+  The window is **not** blocked out from third-party screenshot tools. If you open some screenshot tool with preview while screencasting, blocked out windows **will be visible** on the screencast.
+  
+  Be careful when blocking out windows based on a dynamically changing window title. When switching tabs, the old tab contents may show up on a screencast for an instant because window title is not double-buffered in the Wayland protocol.
+</Warning>
+
+### variable-refresh-rate
+
+<Badge text="Since: 0.1.9" />
+
+If set to true, whenever this window displays on an output with on-demand VRR, it will enable VRR on that output.
+
+```kdl
+// Configure some output with on-demand VRR.
+output "HDMI-A-1" {
+    variable-refresh-rate on-demand=true
+}
+
+// Enable on-demand VRR when mpv displays on the output.
+window-rule {
+    match app-id="^mpv$"
+
+    variable-refresh-rate true
+}
+```
+
+### default-column-display
+
+<Badge text="Since: 25.02" />
+
+Set the default display mode for columns created from this window. Can be `normal` or `tabbed`.
+
+```kdl
+// Make Evince windows open as tabbed columns.
+window-rule {
+    match app-id="^evince$"
+
+    default-column-display "tabbed"
+}
+```
+
+### geometry-corner-radius
+
+<Badge text="Since: 0.1.6" />
+
+Set the corner radius of the window.
+
+```kdl
+window-rule {
+    geometry-corner-radius 12
+}
+```
+
+Instead of one radius, you can set four, for each corner (top-left, top-right, bottom-right, bottom-left):
+
+```kdl
+window-rule {
+    geometry-corner-radius 8 8 0 0
+}
+```
+
+<Info>
+  On its own, this setting will only affect the border and the focus ring. If you'd like to force-round the corners of the window itself, set `clip-to-geometry true` in addition to this setting.
+</Info>
+
+### clip-to-geometry
+
+<Badge text="Since: 0.1.6" />
+
+Clips the window to its visual geometry. This will cut out any client-side window shadows, and also round window corners according to `geometry-corner-radius`.
+
+```kdl
+window-rule {
+    clip-to-geometry true
+}
+```
+
+### Size Overrides
+
+You can amend the window's minimum and maximum size in logical pixels.
+
+```kdl
+window-rule {
+    min-width 100
+    max-width 200
+    min-height 300
+    max-height 300
+}
+```
+
+```kdl
+// Fix OBS with server-side decorations missing a minimum width.
+window-rule {
+    match app-id=r#"^com\.obsproject\.Studio$"#
+
+    min-width 876
+}
+```
+
+<Warning>
+  Keep in mind that the window itself always has a final say in its size. These values instruct niri to never ask the window to be smaller than the minimum you set, or to be bigger than the maximum you set.
+  
+  `max-height` will only apply to automatically-sized windows if it is equal to `min-height`.
+</Warning>
+
+## Example Configurations
+
+### WezTerm Initial Configure Workaround
+
+```kdl
+window-rule {
+    match app-id=r#"^org\.wezfurlong\.wezterm$"#
+    default-column-width {}
+}
+```
+
+### Firefox Picture-in-Picture
+
+```kdl
+window-rule {
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    open-floating true
+    default-column-width { fixed 480; }
+    default-window-height { fixed 270; }
+}
+```
+
+### Password Manager Privacy
+
+```kdl
+window-rule {
+    match app-id=r#"^org\.keepassxc\.KeePassXC$"#
+    match app-id=r#"^org\.gnome\.World\.Secrets$"#
+
+    block-out-from "screen-capture"
+}
+```
+
+### Rounded Corners for All Windows
+
+```kdl
+window-rule {
+    geometry-corner-radius 12
+    clip-to-geometry true
+}
+```

@@ -1,0 +1,137 @@
+---
+title: Switch Events
+description: Configure laptop lid close/open and tablet mode event handlers in niri
+---
+
+<Badge text="Since: 0.1.10" />
+
+## Overview
+
+Switch event bindings are declared in the `switch-events {}` section of the config. They allow you to react to hardware events like laptop lid close/open and tablet mode changes.
+
+```kdl
+switch-events {
+    lid-close { spawn "notify-send" "The laptop lid is closed!"; }
+    lid-open { spawn "notify-send" "The laptop lid is open!"; }
+    tablet-mode-on { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true"; }
+    tablet-mode-off { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled false"; }
+}
+```
+
+<Info>
+  The syntax is similar to key bindings. Currently, only the `spawn` action is supported.
+</Info>
+
+<Warning>
+  In contrast to key bindings, switch event bindings are **always** executed, even when the session is locked.
+</Warning>
+
+## Lid Events
+
+### lid-close
+
+This event triggers when the laptop lid is closed.
+
+```kdl
+switch-events {
+    lid-close { spawn "notify-send" "The laptop lid is closed!"; }
+}
+```
+
+### lid-open
+
+This event triggers when the laptop lid is opened.
+
+```kdl
+switch-events {
+    lid-open { spawn "notify-send" "The laptop lid is open!"; }
+}
+```
+
+<Note>
+  Niri will already automatically turn the internal laptop monitor on and off in accordance with the laptop lid, so you don't need to handle that manually.
+</Note>
+
+## Tablet Mode Events
+
+### tablet-mode-on
+
+This event triggers when a convertible laptop goes into tablet mode. In tablet mode, the keyboard and mouse are usually inaccessible, so you can use this event to activate the on-screen keyboard.
+
+```kdl
+switch-events {
+    tablet-mode-on { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true"; }
+}
+```
+
+### tablet-mode-off
+
+This event triggers when a convertible laptop goes out of tablet mode.
+
+```kdl
+switch-events {
+    tablet-mode-off { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled false"; }
+}
+```
+
+<Warning>
+  The commands in these examples are just examples. You will need to provide your own on-screen keyboard, such as:
+  - [sysboard](https://github.com/System64fumo/sysboard)
+  - [wvkbd](https://github.com/jjsullivan5196/wvkbd)
+</Warning>
+
+## Example Configurations
+
+### Automatic Screen Lock on Lid Close
+
+```kdl
+switch-events {
+    lid-close { spawn "swaylock"; }
+}
+```
+
+### Toggle On-Screen Keyboard
+
+```kdl
+switch-events {
+    tablet-mode-on { spawn "squeekboard"; }
+    tablet-mode-off { spawn "pkill" "squeekboard"; }
+}
+```
+
+### Adjust Display Brightness
+
+```kdl
+switch-events {
+    lid-close { spawn "brightnessctl" "set" "0"; }
+    lid-open { spawn "brightnessctl" "set" "100%"; }
+}
+```
+
+### Send Notifications
+
+```kdl
+switch-events {
+    lid-close { spawn "notify-send" "Laptop" "Lid closed - display off"; }
+    lid-open { spawn "notify-send" "Laptop" "Lid opened - display on"; }
+    tablet-mode-on { spawn "notify-send" "Tablet Mode" "Switched to tablet mode"; }
+    tablet-mode-off { spawn "notify-send" "Laptop Mode" "Switched to laptop mode"; }
+}
+```
+
+## Notes
+
+<CardGroup cols={2}>
+  <Card title="Always Executed" icon="lock-open">
+    Switch events run even when your session is locked, so you can use them for critical system functions.
+  </Card>
+  <Card title="Spawn Only" icon="terminal">
+    Currently, only the `spawn` action is supported for switch events. Other actions from key bindings are not available.
+  </Card>
+  <Card title="Automatic Monitor Handling" icon="display">
+    Niri automatically handles turning the laptop monitor on/off based on lid state.
+  </Card>
+  <Card title="Hardware Dependent" icon="laptop">
+    These events depend on your hardware. Not all laptops support all events.
+  </Card>
+</CardGroup>

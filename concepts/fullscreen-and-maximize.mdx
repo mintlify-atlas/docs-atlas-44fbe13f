@@ -1,0 +1,130 @@
+---
+title: Fullscreen and Maximize
+description: Different ways to make windows fill the screen in niri
+---
+
+There are several ways to make a window big on niri: maximizing the column, maximizing the window to edges, and fullscreening the window.
+Let's look at their differences.
+
+## Maximized (Full-Width) Columns
+
+Maximizing the column via `maximize-column` (bound to `Mod+F` by default) expands its width to cover the whole screen.
+
+<Info>
+**Characteristics:**
+- Still leaves space for struts and gaps
+- Can contain multiple windows
+- Windows retain their borders
+- Equivalent to `proportion 1.0` column width, or `set-column-width "100%"`
+</Info>
+
+### Window Rules
+
+You can make a window open in a maximized column with the `open-maximized true` window rule.
+
+## Windows Maximized to Edges
+
+<Note>
+Available since version 25.11
+</Note>
+
+You can maximize an individual window via `maximize-window-to-edges`.
+
+<Card title="Standard Maximize Behavior">
+This is the same maximize as you can find on other desktop environments and operating systems:
+- Expands a window to the edges of the available screen area
+- You will still see your bar
+- No struts, gaps, or borders visible
+- Windows generally respond by squaring their corners
+</Card>
+
+### Window Control
+
+Windows are aware of their maximized-to-edges status and can control maximizing-to-edges:
+- Click on the square icon in the window's titlebar
+- Double-click on the titlebar
+- These actions request niri to maximize or unmaximize the window
+
+<Tip>
+You can put multiple maximized windows into a tabbed column, but not into a regular column.
+</Tip>
+
+### Window Rules
+
+Use the `open-maximized-to-edges` window rule to:
+- Make a window open maximized-to-edges
+- Prevent a window from maximizing upon opening
+
+## Fullscreen Windows
+
+Windows can go fullscreen, usually seen with video players, presentations or games.
+You can also force a window to go fullscreen via `fullscreen-window` (bound to `Mod+Shift+F` by default).
+
+<Info>
+**Fullscreen characteristics:**
+- Covers the entire screen
+- Windows are aware of their fullscreen status
+- Can respond by hiding titlebars or other parts of the UI
+</Info>
+
+### Black Backdrop
+
+Niri renders a solid black backdrop behind fullscreen windows.
+This backdrop helps match the screen size when the window itself remains too small (e.g. if you try to fullscreen a fixed-size dialog window), which is the behavior defined by the Wayland protocol.
+
+<Warning>
+When a fullscreen window is focused and not animating, it will cover floating windows and the top layer-shell layer.
+
+If you want your layer-shell notifications or launcher to appear over fullscreen windows, configure the respective tools to put them on the **overlay layer-shell layer**.
+</Warning>
+
+### Window Rules
+
+Use the `open-fullscreen` window rule to:
+- Make a window open fullscreen
+- Prevent a window from fullscreening upon opening
+
+## Common Behaviors
+
+<Accordion title="Layout Integration">
+Fullscreen or maximized-to-edges windows can only be in the scrolling layout.
+
+So if you try to fullscreen or maximize a floating window, it'll move into the scrolling layout.
+Then, unfullscreening/unmaximizing will bring it back into the floating layout automatically.
+</Accordion>
+
+<Accordion title="Scrollable Tiling">
+Thanks to scrollable tiling, fullscreen and maximized windows remain a normal participant of the layout: you can scroll left and right from them and see other windows.
+</Accordion>
+
+<Accordion title="Window State Restoration">
+Fullscreen and maximize-to-edges are both special states that the windows are aware of and can control.
+Windows sometimes want to restore their fullscreen or, more frequently, maximized state when they open.
+
+The best opportunity for this is during the **initial configure** sequence when the window tells niri everything it should know before opening the window.
+If the window does this, then `open-maximized-to-edges` and `open-fullscreen` window rules have a chance to block or adjust the request.
+
+<Warning>
+However, some clients tend to request to be maximized shortly **after** the initial configure sequence, when the niri already sent them the initial size request (sometimes even after showing on screen, resulting in a quick resize right after opening).
+
+From niri's point of view, the window is already open by this point, so if the window does this, then the `open-maximized-to-edges` and `open-fullscreen` window rules don't do anything.
+</Warning>
+</Accordion>
+
+## Windowed Fullscreen
+
+<Note>
+Available since version 25.05
+</Note>
+
+Niri can also tell a window that it's in fullscreen without actually making it fullscreen, via the `toggle-windowed-fullscreen` action.
+
+<Card title="Use Case">
+This is generally useful for screencasting browser-based presentations, when you want to hide the browser UI, but still have the window sized as a normal window.
+</Card>
+
+<Info>
+When in windowed fullscreen, you can use the niri action to maximize or unmaximize the window.
+
+Window-side titlebar maximize buttons and gestures may not work, since the window will always think that it's in fullscreen.
+</Info>

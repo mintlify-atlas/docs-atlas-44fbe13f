@@ -1,0 +1,243 @@
+---
+title: Screencasting
+description: Record your screen, individual windows, and use advanced screencasting features in niri
+---
+
+## Overview
+
+The primary screencasting interface that niri offers is through **portals and pipewire**. It is supported by:
+
+- [OBS Studio](https://obsproject.com/)
+- Firefox
+- Chromium
+- Electron apps
+- Telegram
+- Other apps using xdg-desktop-portal
+
+You can screencast both **monitors** and **individual windows**.
+
+### Requirements
+
+<Steps>
+  <Step title="D-Bus Session">
+    You need a working D-Bus session
+  </Step>
+  
+  <Step title="PipeWire">
+    Install and configure PipeWire
+  </Step>
+  
+  <Step title="Desktop Portal">
+    Install `xdg-desktop-portal-gnome`
+  </Step>
+  
+  <Step title="Session Mode">
+    Run niri as a session through `niri-session` or from a display manager
+  </Step>
+</Steps>
+
+<Note>
+On widely used distros, this should all "just work".
+</Note>
+
+### Alternative Methods
+
+Alternatively, you can use tools that rely on the `wlr-screencopy` protocol, which niri also supports.
+
+## Blocking Windows from Screencasts
+
+You can block out specific windows from screencasts, replacing them with solid black rectangles. This is useful for password managers, messengers, or any sensitive content.
+
+![Screenshot showing a window visible normally, but blocked out on OBS.](https://github.com/niri-wm/niri/raw/main/wiki/img/block-out-from-screencast.png)
+
+### Window Rules
+
+Block windows using the `block-out-from` window rule:
+
+```kdl
+// Block out password managers from screencasts.
+window-rule {
+    match app-id=r#"^org\.keepassxc\.KeePassXC$"#
+    match app-id=r#"^org\.gnome\.World\.Secrets$"#
+
+    block-out-from "screencast"
+}
+```
+
+### Layer Rules
+
+You can similarly block out layer surfaces:
+
+```kdl
+// Block out mako notifications from screencasts.
+layer-rule {
+    match namespace="^notifications$"
+
+    block-out-from "screencast"
+}
+```
+
+<Card title="Learn More" icon="book" href="/configuration/window-rules#block-out-from">
+  Check the window rules documentation for more details and examples
+</Card>
+
+## Dynamic Screencast Target
+
+<Note>
+Available since version 25.05
+</Note>
+
+Niri provides a special screencast stream that you can change dynamically. It shows up as **"niri Dynamic Cast Target"** in the screencast window dialog.
+
+![Screencast dialog showing niri Dynamic Cast Target](https://github.com/user-attachments/assets/e236ce74-98ec-4f3a-a99b-29ac1ff324dd)
+
+### How It Works
+
+When you select it, it will start as an empty, transparent video stream. Then, you can use the following binds to change what it shows:
+
+<CardGroup cols={3}>
+  <Card title="Cast Window" icon="window-maximize">
+    `set-dynamic-cast-window` - Cast the focused window
+  </Card>
+  
+  <Card title="Cast Monitor" icon="desktop">
+    `set-dynamic-cast-monitor` - Cast the focused monitor
+  </Card>
+  
+  <Card title="Clear Target" icon="eraser">
+    `clear-dynamic-cast-target` - Go back to empty stream
+  </Card>
+</CardGroup>
+
+### Configuration Example
+
+```kdl
+binds {
+    Mod+Shift+C { set-dynamic-cast-window; }
+    Mod+Shift+M { set-dynamic-cast-monitor; }
+    Mod+Shift+X { clear-dynamic-cast-target; }
+}
+```
+
+### Command Line Usage
+
+You can also use these actions from the command line, for example to interactively pick which window to cast:
+
+```bash
+niri msg action set-dynamic-cast-window --id $(niri msg --json pick-window | jq .id)
+```
+
+<video controls src="https://github.com/user-attachments/assets/c617a9d6-7d5e-4f1f-b8cc-9301182d9634">
+  Your browser does not support the video tag.
+</video>
+
+### Behavior Notes
+
+- If the cast target disappears (e.g., the target window closes), the stream goes back to empty
+- All dynamic casts share the same target
+- New casts start out empty until the next time you change the target (to avoid surprises)
+
+## Indicating Screencasted Windows
+
+<Note>
+Available since version 25.02
+</Note>
+
+The `is-window-cast-target=true` window rule matches windows targeted by an ongoing window screencast. You can use it with a special border color to clearly indicate screencasted windows.
+
+<Warning>
+This works for windows targeted by dynamic screencasts, but will **not** work for windows that just happen to be visible in a full-monitor screencast.
+</Warning>
+
+### Example Configuration
+
+```kdl
+// Indicate screencasted windows with red colors.
+window-rule {
+    match is-window-cast-target=true
+
+    focus-ring {
+        active-color "#f38ba8"
+        inactive-color "#7d0d2d"
+    }
+
+    border {
+        inactive-color "#7d0d2d"
+    }
+
+    shadow {
+        color "#7d0d2d70"
+    }
+
+    tab-indicator {
+        active-color "#f38ba8"
+        inactive-color "#7d0d2d"
+    }
+}
+```
+
+![Screencasted window indicated with a red border and shadow](https://github.com/user-attachments/assets/375b381e-3a87-4e94-8676-44404971d893)
+
+## Windowed (Fake) Fullscreen
+
+<Note>
+Available since version 25.05
+</Note>
+
+When screencasting browser-based presentations like Google Slides, you usually want to hide the browser UI, which requires making the browser fullscreen. This is not always convenient, especially if you have an ultrawide monitor or just want to leave the browser as a smaller window.
+
+The `toggle-windowed-fullscreen` bind helps with this. It tells the app that it went fullscreen, while in reality leaving it as a normal window that you can resize and put wherever you want.
+
+### Configuration
+
+```kdl
+binds {
+    Mod+Ctrl+Shift+F { toggle-windowed-fullscreen; }
+}
+```
+
+<Note>
+Keep in mind that not all apps react to fullscreening, so it may sometimes look as if the bind did nothing.
+</Note>
+
+### Use Case Example
+
+Here's an example showing a windowed-fullscreen Google Slides presentation, along with the presenter view and a meeting app:
+
+![Windowed Google Slides presentation with presenter view and Zoom](https://github.com/user-attachments/assets/b2b49eea-f5a0-4c0a-b537-51fd1949a59d)
+
+## Screen Mirroring
+
+For presentations it can be useful to mirror an output to another. Currently, niri doesn't have built-in output mirroring, but you can use [`wl-mirror`](https://github.com/Ferdi265/wl-mirror) that mirrors an output to a window.
+
+<Warning>
+The command below requires [`jq`](https://jqlang.org/download/) to be installed.
+</Warning>
+
+### Configuration
+
+```kdl
+binds {
+    Mod+P repeat=false { spawn-sh "wl-mirror $(niri msg --json focused-output | jq -r .name)"; }
+}
+```
+
+### Usage Steps
+
+<Steps>
+  <Step title="Focus Source Output">
+    Focus the output you want to mirror
+  </Step>
+  
+  <Step title="Start Mirroring">
+    Press `Mod+P` to start `wl-mirror`
+  </Step>
+  
+  <Step title="Move Window">
+    Move the `wl-mirror` window to the target output
+  </Step>
+  
+  <Step title="Fullscreen">
+    Fullscreen the `wl-mirror` window (by default, `Mod+Shift+F`)
+  </Step>
+</Steps>

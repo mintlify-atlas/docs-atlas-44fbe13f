@@ -1,0 +1,183 @@
+---
+title: Application-Specific Issues
+description: Solutions for common issues with specific applications running on niri
+---
+
+This page covers troubleshooting steps for various applications that may require special configuration to work properly with niri.
+
+## Electron Applications
+
+Electron-based applications can run directly on Wayland, but it's not always the default.
+
+### Electron ≥ 39
+
+Use the command-line flag if the app doesn't default to Wayland:
+
+```bash
+--ozone-platform=wayland
+```
+
+### Electron < 39
+
+Set an environment variable in your niri config:
+
+```kdl
+environment {
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+}
+```
+
+### Electron ≤ 28
+
+Pass command-line flags to the target application:
+
+```bash
+--enable-features=UseOzonePlatform --ozone-platform-hint=auto
+```
+
+<Tip>
+If the application has a [desktop entry](https://specifications.freedesktop.org/menu-spec/latest/menu-add-example.html), you can put the command-line arguments into the `Exec` section.
+</Tip>
+
+## VSCode
+
+If you're having issues with some VSCode hotkeys, try starting Xwayland and setting the `DISPLAY=:0` environment variable for VSCode.
+
+<Note>
+VSCode should still run with the Wayland backend, but with `DISPLAY` set to a running Xwayland instance. VSCode currently unconditionally queries the X server for a keymap.
+</Note>
+
+## JetBrains IDEs
+
+JetBrains IDEs can run directly on Wayland, but it's not the default.
+
+For JetBrainsRuntime > 17, set the flag `-Dawt.toolkit.name=WLToolkit` in:
+
+**Help → Edit Custom VM Options → Add**
+
+## WezTerm
+
+<Note>
+Both of these issues appear to be fixed in the nightly build of WezTerm.
+</Note>
+
+### Window Not Showing Up
+
+There's [a bug](https://github.com/wezterm/wezterm/issues/4708) in WezTerm where it waits for a zero-sized Wayland configure event, so its window never shows up. Add this window rule to your niri config (included in the default config):
+
+```kdl
+window-rule {
+    match app-id=r#"^org\.wezfurlong\.wezterm$"#
+    default-column-width {}
+}
+```
+
+This empty default column width lets WezTerm pick its own initial width, making it show up properly.
+
+### Sizing and Resize Issues
+
+There's [another bug](https://github.com/wezterm/wezterm/issues/6472) in WezTerm that causes it to choose a wrong size when it's in a tiled state, preventing resizing.
+
+Niri puts windows in the tiled state with `prefer-no-csd`. If you hit this problem, comment out `prefer-no-csd` in the niri config and restart WezTerm.
+
+## Ghidra
+
+Some Java apps like Ghidra can show up blank under xwayland-satellite.
+
+**Solution:** Run them with the `_JAVA_AWT_WM_NONREPARENTING=1` environment variable:
+
+```kdl
+environment {
+    _JAVA_AWT_WM_NONREPARENTING "1"
+}
+```
+
+## Zen Browser
+
+DMABUF screencasts are disabled in Zen Browser by default, so screencasting doesn't work out of the box on niri.
+
+**Fix:**
+1. Open `about:config`
+2. Set `widget.dmabuf.force-enabled` to `true`
+
+## GTK 4 Dead Keys / Compose
+
+GTK 4.20 [stopped handling](https://gitlab.gnome.org/GNOME/gtk/-/merge_requests/8556) dead keys and Compose on its own on Wayland.
+
+### Solution Options
+
+**Option 1:** Run an IME like IBus or Fcitx5
+
+**Option 2:** Set the `GTK_IM_MODULE=simple` environment variable:
+
+```kdl
+environment {
+    GTK_IM_MODULE "simple"
+}
+```
+
+<Warning>
+The niri environment config does not propagate to apps and shells started by systemd (e.g., application launchers). You may need to set the variable in your login shell config (e.g., `~/.bash_profile`) instead.
+</Warning>
+
+## Fullscreen Games
+
+Some video games (both Linux-native and on Wine) have various issues when using non-stacking desktop environments.
+
+### Using Gamescope
+
+Most game issues can be avoided with Valve's [gamescope](https://github.com/ValveSoftware/gamescope):
+
+```bash
+gamescope -f -w 1920 -h 1080 -W 1920 -H 1080 --force-grab-cursor --backend sdl -- <game>
+```
+
+This command runs the game in 1080p fullscreen. Replace the width and height values to match your desired resolution.
+
+- `--force-grab-cursor` forces gamescope to use relative mouse movement, preventing the cursor from escaping on multi-monitor setups
+- `--backend sdl` is currently required as gamescope's default Wayland backend doesn't lock the cursor properly
+
+### For Steam Users
+
+Use gamescope through a game's [launch options](https://help.steampowered.com/en/faqs/view/7D01-D2DD-D75E-2955) by replacing the game executable with `%command%`.
+
+<Tip>
+- Running X11 games with this method doesn't require Xwayland as gamescope creates its own Xwayland server
+- For Wayland-native games, pass `--expose-wayland` to eliminate X11 entirely
+</Tip>
+
+## Steam
+
+### Black Window Issue
+
+On some systems, Steam will show a fully black window.
+
+**Fix:**
+1. Navigate to **Settings → Interface** (via Steam's tray icon, or by finding the Steam menu at the top left)
+2. **Disable** GPU accelerated rendering in web views
+3. Restart Steam
+
+**Alternative:** Pass the launch argument `-system-composer` instead if you want to keep GPU acceleration enabled.
+
+### Steam Notifications
+
+Steam notifications don't run through the standard notification daemon and show up as floating windows in the center of the screen.
+
+Move them to a more convenient location with a window rule:
+
+```kdl
+window-rule {
+    match app-id="steam" title=r#"^notificationtoasts_\d+_desktop$"#
+    default-floating-position x=10 y=10 relative-to="bottom-right"
+}
+```
+
+## Waybar and GTK 3 Components
+
+If you have rounded corners on Waybar and they show up with black pixels in the corners, set your Waybar opacity to 0.99.
+
+### Why This Happens
+
+GTK 3 has a bug where it reports a surface as fully opaque even if it has rounded corners. This leads to niri filling the transparent pixels inside the corners with black.
+
+Setting the surface opacity below 1 fixes the problem because GTK no longer reports the surface as opaque.

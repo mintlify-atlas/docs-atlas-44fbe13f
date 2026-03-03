@@ -1,0 +1,102 @@
+---
+title: Layer Shell Components
+description: Important considerations for bars, launchers, and other layer-shell components in niri
+---
+
+When working with layer-shell components (bars, launchers, etc.) in niri, there are several important behaviors to keep in mind.
+
+## Full-Screen Window Behavior
+
+<Warning>
+When a [full-screen](/features/fullscreen-and-maximize) window is active and covers the entire screen, it will render **above the top layer**, and it will be prioritized for keyboard focus.
+</Warning>
+
+If your launcher uses the top layer, and you try to run it while looking at a full-screen window, it won't show up.
+
+<Tip>
+Only the **overlay layer** will show up on top of full-screen windows.
+</Tip>
+
+### Example Scenario
+
+<Steps>
+  <Step title="Full-screen window is active">
+    A video player or game is running in full-screen mode.
+  </Step>
+  
+  <Step title="Launch a top-layer component">
+    You try to open a launcher that uses the top layer.
+  </Step>
+  
+  <Step title="Component doesn't appear">
+    The launcher won't be visible because the full-screen window renders above it.
+  </Step>
+  
+  <Step title="Solution">
+    Use the overlay layer for components that need to appear over full-screen windows.
+  </Step>
+</Steps>
+
+## Keyboard Focus Behavior
+
+### On-Demand Focus
+
+<Info>
+Components on the **bottom** and **background** layers will receive on-demand keyboard focus as expected.
+</Info>
+
+This means they can receive focus when you interact with them directly.
+
+### Exclusive Focus
+
+<Note>
+Components on the bottom and background layers will only receive **exclusive** keyboard focus when there are no windows on the workspace.
+</Note>
+
+This ensures that regular windows take priority for keyboard input when they're present.
+
+## Overview Behavior
+
+<Info>
+When opening the [Overview](/features/overview), components behave differently based on their layer.
+</Info>
+
+### Layer Behavior in Overview
+
+<Tabs>
+  <Tab title="Bottom & Background Layers">
+    Components on these layers will:
+    - Zoom out together with the workspaces
+    - Remain attached to their respective workspaces
+    - Move with the workspace during transitions
+  </Tab>
+  
+  <Tab title="Top & Overlay Layers">
+    Components on these layers will:
+    - Remain on top of the Overview
+    - Stay in place without zooming
+    - Be visible across all workspaces in the Overview
+  </Tab>
+</Tabs>
+
+### Bar Placement Recommendation
+
+<Tip>
+If you want the bar to remain on top during Overview, put it on the **top** layer.
+</Tip>
+
+## Layer Selection Guide
+
+Choose the appropriate layer based on your component's needs:
+
+| Component Type | Recommended Layer | Reason |
+|----------------|-------------------|--------|
+| Status bar | Top | Stays visible during Overview |
+| Launcher | Overlay | Can appear over full-screen windows |
+| Desktop icons | Background | Zooms with workspace in Overview |
+| Dock | Bottom | Receives focus when no windows present |
+| Notifications | Overlay | Appears above all content |
+
+<Note>
+These are recommendations based on typical use cases. Your specific needs may vary.
+</Note>

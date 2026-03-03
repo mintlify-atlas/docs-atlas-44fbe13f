@@ -1,0 +1,443 @@
+---
+title: Animations
+description: Configure animation behavior in niri compositor
+---
+
+Niri has several animations which you can configure in the same way. Additionally, you can disable or slow down all animations at once.
+
+## Quick Overview
+
+Here's a quick glance at the available animations with their default values:
+
+```kdl
+animations {
+    // Uncomment to turn off all animations.
+    // You can also put "off" into each individual animation to disable it.
+    // off
+
+    // Slow down all animations by this factor. Values below 1 speed them up instead.
+    // slowdown 3.0
+
+    // Individual animations.
+
+    workspace-switch {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+
+    window-open {
+        duration-ms 150
+        curve "ease-out-expo"
+    }
+
+    window-close {
+        duration-ms 150
+        curve "ease-out-quad"
+    }
+
+    horizontal-view-movement {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+
+    window-movement {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+
+    window-resize {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+
+    config-notification-open-close {
+        spring damping-ratio=0.6 stiffness=1000 epsilon=0.001
+    }
+
+    exit-confirmation-open-close {
+        spring damping-ratio=0.6 stiffness=500 epsilon=0.01
+    }
+
+    screenshot-ui-open {
+        duration-ms 200
+        curve "ease-out-quad"
+    }
+
+    overview-open-close {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+
+    recent-windows-close {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.001
+    }
+}
+```
+
+## Global Animation Controls
+
+### Disable All Animations
+
+```kdl
+animations {
+    off
+}
+```
+
+### Slow Down Animations
+
+<ParamField path="slowdown" type="number">
+  Slow down all animations by this factor. Values below 1 speed them up instead.
+</ParamField>
+
+```kdl
+animations {
+    // Slow down all animations by 3x
+    slowdown 3.0
+}
+```
+
+## Animation Types
+
+There are two animation types: easing and spring. Each animation can be either an easing or a spring.
+
+### Easing
+
+This is a relatively common animation type that changes the value over a set duration using an interpolation curve.
+
+<ParamField path="duration-ms" type="number">
+  Duration of the animation in milliseconds.
+</ParamField>
+
+<ParamField path="curve" type="string">
+  The easing curve to use. Available options:
+  - `"ease-out-quad"` (since 0.1.5)
+  - `"ease-out-cubic"`
+  - `"ease-out-expo"`
+  - `"linear"` (since 0.1.6)
+  - `"cubic-bezier"` (since 25.08) - Custom cubic Bézier curve
+</ParamField>
+
+```kdl
+animations {
+    window-open {
+        duration-ms 150
+        curve "ease-out-expo"
+    }
+}
+```
+
+#### Custom Cubic Bézier
+
+<Info>
+Available since version 25.08
+</Info>
+
+A custom [cubic Bézier curve](https://www.w3.org/TR/css-easing-1/#cubic-bezier-easing-functions). You need to set 4 numbers defining the control points of the curve:
+
+```kdl
+animations {
+    window-open {
+        // Same as CSS cubic-bezier(0.05, 0.7, 0.1, 1)
+        curve "cubic-bezier" 0.05 0.7 0.1 1
+    }
+}
+```
+
+You can tweak the cubic-bezier parameters on pages like [easings.co](https://easings.co?curve=0.05,0.7,0.1,1) or preview curves at [easings.net](https://easings.net/).
+
+### Spring
+
+Spring animations use a model of a physical spring to animate the value. They notably feel better with touchpad gestures, because they take into account the velocity of your fingers as you release the swipe.
+
+Springs can also oscillate/bounce at the end with the right parameters if you like that sort of thing, but they don't have to (and by default they mostly don't).
+
+<Tip>
+You can use the [Elastic](https://flathub.org/apps/app.drey.Elastic) app to help visualize how the spring parameters change the animation.
+</Tip>
+
+A spring animation is configured with three mandatory parameters:
+
+```kdl
+animations {
+    workspace-switch {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+}
+```
+
+<ParamField path="damping-ratio" type="number" default="1.0">
+  Goes from 0.1 to 10.0:
+  - **below 1.0**: underdamped spring, will oscillate in the end
+  - **1.0**: critically damped spring, comes to rest in minimum possible time without oscillations
+  - **above 1.0**: overdamped spring, won't oscillate
+</ParamField>
+
+<Warning>
+Overdamped springs currently have some numerical stability issues and may cause graphical glitches. Therefore, setting `damping-ratio` above `1.0` is not recommended.
+</Warning>
+
+<ParamField path="stiffness" type="number">
+  Lower stiffness results in a slower animation more prone to oscillation.
+</ParamField>
+
+<ParamField path="epsilon" type="number">
+  Set to a lower value if the animation "jumps" at the end.
+</ParamField>
+
+<Tip>
+The spring *mass* (which you can see in Elastic) is hardcoded to 1.0 and cannot be changed. Instead, change `stiffness` proportionally. E.g. increasing mass by 2× is the same as decreasing stiffness by 2×.
+</Tip>
+
+## Individual Animations
+
+### workspace-switch
+
+<ParamField path="workspace-switch" type="spring">
+  Animation when switching workspaces up and down, including after the vertical touchpad gesture. A spring is recommended for this animation.
+</ParamField>
+
+```kdl
+animations {
+    workspace-switch {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+}
+```
+
+### window-open
+
+<ParamField path="window-open" type="easing">
+  Window opening animation. Uses an easing type by default.
+</ParamField>
+
+```kdl
+animations {
+    window-open {
+        duration-ms 150
+        curve "ease-out-expo"
+    }
+}
+```
+
+#### Custom Shader
+
+<Info>
+Available since version 0.1.6
+</Info>
+
+<Warning>
+Custom shaders do not have a backwards compatibility guarantee. The interface may change as new features are developed.
+</Warning>
+
+You can write a custom shader for drawing the window during an open animation. See the [example shader](https://github.com/YaLTeR/niri/blob/main/resources/examples/open_custom_shader.frag) for full documentation.
+
+```kdl
+animations {
+    window-open {
+        duration-ms 250
+        curve "linear"
+
+        custom-shader r"
+            vec4 open_color(vec3 coords_geo, vec3 size_geo) {
+                vec4 color = vec4(0.0);
+
+                if (0.0 <= coords_geo.x && coords_geo.x <= 1.0
+                        && 0.0 <= coords_geo.y && coords_geo.y <= 1.0)
+                {
+                    vec4 from = vec4(1.0, 0.0, 0.0, 1.0);
+                    vec4 to = vec4(0.0, 1.0, 0.0, 1.0);
+                    color = mix(from, to, coords_geo.y);
+                }
+
+                return color * niri_clamped_progress;
+            }
+        "
+    }
+}
+```
+
+### window-close
+
+<Info>
+Available since version 0.1.5
+</Info>
+
+<ParamField path="window-close" type="easing">
+  Window closing animation. Uses an easing type by default.
+</ParamField>
+
+```kdl
+animations {
+    window-close {
+        duration-ms 150
+        curve "ease-out-quad"
+    }
+}
+```
+
+Custom shaders are also supported for window-close. See the [example shader](https://github.com/YaLTeR/niri/blob/main/resources/examples/close_custom_shader.frag) for details.
+
+### horizontal-view-movement
+
+<ParamField path="horizontal-view-movement" type="spring">
+  All horizontal camera view movement animations, such as:
+  - When a window off-screen is focused and the camera scrolls to it
+  - When a new window appears off-screen and the camera scrolls to it
+  - After a horizontal touchpad gesture (a spring is recommended)
+</ParamField>
+
+```kdl
+animations {
+    horizontal-view-movement {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+}
+```
+
+### window-movement
+
+<Info>
+Available since version 0.1.5
+</Info>
+
+<ParamField path="window-movement" type="spring">
+  Movement of individual windows within a workspace. Includes:
+  - Moving window columns with move-column-left and move-column-right
+  - Moving windows inside a column with move-window-up and move-window-down
+  - Moving windows out of the way upon window opening and closing
+  - Window movement between columns when consuming/expelling
+</ParamField>
+
+This animation does not include camera view movement, such as scrolling the workspace left and right.
+
+```kdl
+animations {
+    window-movement {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+}
+```
+
+### window-resize
+
+<Info>
+Available since version 0.1.5
+</Info>
+
+<ParamField path="window-resize" type="spring">
+  Window resize animation. Only manual window resizes are animated (when you resize with switch-preset-column-width or maximize-column). Very small resizes (up to 10 pixels) are not animated.
+</ParamField>
+
+```kdl
+animations {
+    window-resize {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+}
+```
+
+Custom shaders are also supported for window-resize. See the [example shader](https://github.com/YaLTeR/niri/blob/main/resources/examples/resize_custom_shader.frag) for details.
+
+### config-notification-open-close
+
+<ParamField path="config-notification-open-close" type="spring">
+  The open/close animation of the config parse error and new default config notifications. Uses an underdamped spring by default (damping-ratio=0.6) which causes a slight oscillation.
+</ParamField>
+
+```kdl
+animations {
+    config-notification-open-close {
+        spring damping-ratio=0.6 stiffness=1000 epsilon=0.001
+    }
+}
+```
+
+### exit-confirmation-open-close
+
+<Info>
+Available since version 25.08
+</Info>
+
+<ParamField path="exit-confirmation-open-close" type="spring">
+  The open/close animation of the exit confirmation dialog. Uses an underdamped spring by default (damping-ratio=0.6) which causes a slight oscillation.
+</ParamField>
+
+```kdl
+animations {
+    exit-confirmation-open-close {
+        spring damping-ratio=0.6 stiffness=500 epsilon=0.01
+    }
+}
+```
+
+### screenshot-ui-open
+
+<Info>
+Available since version 0.1.8
+</Info>
+
+<ParamField path="screenshot-ui-open" type="easing">
+  The open (fade-in) animation of the screenshot UI.
+</ParamField>
+
+```kdl
+animations {
+    screenshot-ui-open {
+        duration-ms 200
+        curve "ease-out-quad"
+    }
+}
+```
+
+### overview-open-close
+
+<Info>
+Available since version 25.05
+</Info>
+
+<ParamField path="overview-open-close" type="spring">
+  The open/close zoom animation of the Overview.
+</ParamField>
+
+```kdl
+animations {
+    overview-open-close {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+}
+```
+
+### recent-windows-close
+
+<Info>
+Available since version 25.11
+</Info>
+
+<ParamField path="recent-windows-close" type="spring">
+  The close fade-out animation of the recent windows switcher.
+</ParamField>
+
+```kdl
+animations {
+    recent-windows-close {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.001
+    }
+}
+```
+
+## Synchronized Animations
+
+<Info>
+Available since version 0.1.5
+</Info>
+
+Sometimes, when two animations are meant to play together synchronized, niri will drive them both with the same configuration.
+
+For example:
+- If a window resize causes the view to move, that view movement animation will use the `window-resize` configuration (rather than `horizontal-view-movement`)
+- Resizing a window in a column vertically causes other windows to move up or down, using the `window-resize` configuration (rather than `window-movement`)
+
+This is especially important for animated resizes to look good when using `center-focused-column "always"`.
+
+<Tip>
+For the best results, consider using the same parameters for related animations (they are all the same by default):
+- `horizontal-view-movement`
+- `window-movement`
+- `window-resize`
+</Tip>

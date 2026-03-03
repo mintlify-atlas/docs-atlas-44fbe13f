@@ -1,0 +1,207 @@
+---
+title: Packaging niri
+description: Guidelines for packaging niri for Linux distributions, including build features, file installation, dependencies, and testing
+---
+
+## Overview
+
+When building niri, check `Cargo.toml` for a list of build features.
+
+<Tip>
+For example, you can replace systemd integration with dinit integration using:
+
+```bash
+cargo build --release --no-default-features --features dinit,dbus,xdp-gnome-screencast
+```
+
+The defaults however should work fine for most distributions.
+</Tip>
+
+<Warning>
+**Do NOT build with `--all-features`!**
+
+Some features are meant only for development use. For example, one of the features enables collection of profiling data into a memory buffer that will grow indefinitely until you run out of memory.
+</Warning>
+
+<Note>
+The `niri-visual-tests` sub-crate/binary is development-only and should not be packaged.
+</Note>
+
+## File Installation
+
+The recommended way to package niri is so that it runs as a standalone desktop session. To do that, put files into the correct directories according to this table:
+
+| File | Destination |
+| ---- | ----------- |
+| `target/release/niri` | `/usr/bin/` |
+| `resources/niri-session` | `/usr/bin/` |
+| `resources/niri.desktop` | `/usr/share/wayland-sessions/` |
+| `resources/niri-portals.conf` | `/usr/share/xdg-desktop-portal/` |
+| `resources/niri.service` (systemd) | `/usr/lib/systemd/user/` |
+| `resources/niri-shutdown.target` (systemd) | `/usr/lib/systemd/user/` |
+| `resources/dinit/niri` (dinit) | `/usr/lib/dinit.d/user/` |
+| `resources/dinit/niri.target` (dinit) | `/usr/lib/dinit.d/user/` |
+
+<Info>
+Doing this will make niri appear in GDM and other display managers.
+</Info>
+
+See the [Integrating niri](/integration/integrating-niri) page for further information on distribution integration.
+
+## Recommended Dependencies
+
+### Required Runtime Dependencies
+
+<Warning>
+Make sure niri depends on `libwayland-server`. This library is currently loaded dynamically, so it's not picked up as a dependency at niri build time.
+</Warning>
+
+### Optional but Strongly Recommended
+
+The following dependencies are optional, but strongly recommended. Set them as automatically-installed optional dependencies, if possible:
+
+<CardGroup cols={2}>
+  <Card title="xwayland-satellite" icon="window">
+    Required to run X11 applications (Steam, Discord, etc.)
+  </Card>
+  
+  <Card title="xdg-desktop-portal-gnome" icon="video">
+    Required for screencasting
+  </Card>
+  
+  <Card title="xdg-desktop-portal-gtk" icon="desktop">
+    Configured as the fallback portal in `niri-portals.conf`. This is the standard fallback portal you want installed.
+  </Card>
+  
+  <Card title="gnome-keyring" icon="key">
+    Configured as the Secret portal provider in `niri-portals.conf`
+  </Card>
+  
+  <Card title="GPU drivers" icon="microchip">
+    Such as `mesa-dri-drivers` and `mesa-libEGL`. Working hardware acceleration is required for running niri.
+  </Card>
+  
+  <Card title="Notification daemon" icon="bell">
+    Such as `mako`, generally required for apps to work correctly
+  </Card>
+</CardGroup>
+
+Finally, you may want to auto-install some of the applications bound in niri's [default configuration file](https://github.com/niri-wm/niri/blob/main/resources/default-config.kdl) (search for `spawn`), such as `alacritty` and `fuzzel`.
+
+## Running Tests
+
+A bulk of our tests spawn niri compositor instances and test Wayland clients. This does not require a graphical session, however due to test parallelism, it can run into file descriptor limits on high core count systems.
+
+<Warning>
+If you run into file descriptor limit problems, you may need to limit not just the Rust test harness thread count, but also the Rayon thread count, since some niri tests use internal Rayon threading:
+
+```bash
+export RAYON_NUM_THREADS=2
+# proceed to run cargo test, perhaps with --test-threads=2
+```
+</Warning>
+
+<Note>
+Don't forget to exclude the development-only `niri-visual-tests` crate when running tests.
+</Note>
+
+### Skipping EGL Tests
+
+Some tests require surfaceless EGL to be available at test time. If this is problematic, you can skip them:
+
+```bash
+cargo test -- --skip=::egl
+```
+
+<Tip>
+You may also want to set the `RUN_SLOW_TESTS=1` environment variable to run the slower tests.
+</Tip>
+
+## Version String
+
+The niri version string includes its version and commit hash:
+
+```bash
+$ niri --version
+niri 25.01 (e35c630)
+```
+
+When building in a packaging system, there's usually no repository, so the commit hash is unavailable and the version will show "unknown commit".
+
+### Setting the Commit Hash
+
+In this case, please set the commit hash manually:
+
+```bash
+export NIRI_BUILD_COMMIT="e35c630"
+# proceed to build niri
+```
+
+### Overriding the Version String
+
+You can also override the version string entirely. Make sure the corresponding niri version stays intact:
+
+```bash
+export NIRI_BUILD_VERSION_STRING="25.01-1 (e35c630)"
+# proceed to build niri
+```
+
+<Warning>
+Remember to set this variable for both `cargo build` and `cargo install` since the latter will rebuild niri if the environment changes.
+</Warning>
+
+## Panics
+
+Good panic backtraces are required for diagnosing niri crashes.
+
+<Steps>
+  <Step title="Test panic backtraces">
+    Use the `niri panic` command to test that your package produces good backtraces:
+    
+    ```bash
+    niri panic
+    ```
+  </Step>
+  
+  <Step title="Verify backtrace quality">
+    Important things to look for:
+    
+    - The panic message is there (e.g., "overflow when subtracting durations")
+    - The backtrace goes all the way up to `main` and includes `cause_panic`
+    - The backtrace includes the file and line number for `cause_panic` (e.g., `at /.../src/utils/mod.rs:382:13`)
+  </Step>
+</Steps>
+
+<Warning>
+If possible, please ensure that your niri package on its own has good panics, i.e. **without** installing debuginfo or other packages.
+
+The user likely won't have debuginfo installed when their compositor first crashes, and we really want to be able to diagnose and fix all crashes right away.
+</Warning>
+
+## Rust Dependencies
+
+Every niri release comes with a vendored dependencies archive from `cargo vendor`. You can use it to build the corresponding niri release completely offline.
+
+<Info>
+If you don't want to use vendored dependencies, consider following the niri release's `Cargo.lock`. It contains the exact dependency versions that were used when testing the release.
+</Info>
+
+### smithay and smithay-drm-extras
+
+<Warning>
+If you need to change the versions of some dependencies, pay extra attention to `smithay` and `smithay-drm-extras` commit hash.
+
+These crates don't currently have regular stable releases, so niri uses git snapshots. Upstream frequently has breaking changes (API and behavior), so you're strongly advised to use the exact commit hash from the niri release's `Cargo.lock`.
+</Warning>
+
+## Shell Completions
+
+You can generate shell completions for several shells via `niri completions <SHELL>`.
+
+```bash
+niri completions bash
+```
+
+<Tip>
+See `niri completions -h` for a full list of supported shells.
+</Tip>

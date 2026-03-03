@@ -1,0 +1,166 @@
+---
+title: Named Workspaces
+description: Create persistent named workspaces in niri
+---
+
+<Info>
+Available since version 0.1.6
+</Info>
+
+You can declare named workspaces at the top level of the config:
+
+```kdl
+workspace "browser"
+
+workspace "chat" {
+    open-on-output "Some Company CoolMonitor 1234"
+}
+```
+
+Contrary to normal dynamic workspaces, named workspaces always exist, even when they have no windows. Otherwise, they behave like any other workspace: you can move them around, move to a different monitor, and so on.
+
+## Basic Usage
+
+Actions like `focus-workspace` or `move-column-to-workspace` can refer to workspaces by name. You can also use an `open-on-workspace` window rule to make a window open on a specific named workspace:
+
+```kdl
+// Declare a workspace named "chat" that opens on the "DP-2" output.
+workspace "chat" {
+    open-on-output "DP-2"
+}
+
+// Open Fractal on the "chat" workspace, if it runs at niri startup.
+window-rule {
+    match at-startup=true app-id=r#"^org\.gnome\.Fractal$"#
+    open-on-workspace "chat"
+}
+```
+
+## Workspace Ordering
+
+Named workspaces initially appear in the order they are declared in the config file. When editing the config while niri is running, newly declared named workspaces will appear at the very top of a monitor.
+
+## Dynamic Name Changes
+
+<Info>
+Available since version 25.01
+</Info>
+
+You can use `set-workspace-name` and `unset-workspace-name` actions to change workspace names dynamically.
+
+## Renaming and Deleting
+
+If you delete some named workspace from the config, the workspace will become normal (unnamed), and if there are no windows on it, it will be removed (as any other normal workspace).
+
+There's no way to give a name to an already existing workspace, but you can simply move windows that you want to a new, empty named workspace.
+
+## Configuration Options
+
+### open-on-output
+
+<ParamField path="open-on-output" type="string">
+  Specifies which output (monitor) the named workspace should initially appear on. Can use the connector name (e.g., "eDP-1") or monitor manufacturer, model, and serial (since 0.1.9).
+</ParamField>
+
+<Info>
+Since version 0.1.9, `open-on-output` can use monitor manufacturer, model, and serial. Before, it could only use the connector name.
+</Info>
+
+<Note>
+Since version 25.02, named workspaces no longer update/forget their original output when opening a new window on them (unnamed workspaces will keep doing that). This means that named workspaces "stick" to their original output in more cases, reflecting their more permanent nature. Explicitly moving a named workspace to a different monitor will still update its original output.
+</Note>
+
+## Layout Config Overrides
+
+<Info>
+Available since version 25.11
+</Info>
+
+You can customize layout settings for named workspaces with a `layout {}` block:
+
+```kdl
+workspace "aesthetic" {
+    // Layout config overrides just for this named workspace.
+    layout {
+        gaps 32
+
+        struts {
+            left 64
+            right 64
+            bottom 64
+            top 64
+        }
+
+        border {
+            on
+            width 4
+        }
+
+        // ...any other setting.
+    }
+}
+```
+
+It accepts all the same options as [the top-level layout block](/configuration/layout), except:
+
+- `empty-workspace-above-first` - This is an output-level setting, doesn't make sense on a workspace
+- `insert-hint` - Currently drawn at the output level, so it's not customizable per-workspace
+
+### Unsetting Flags
+
+To unset a flag, write it with `false`:
+
+```kdl
+layout {
+    // Enabled globally.
+    always-center-single-column
+}
+
+workspace "uncentered" {
+    layout {
+        // Unset on this workspace.
+        always-center-single-column false
+    }
+}
+```
+
+## Examples
+
+### Simple Named Workspace
+
+```kdl
+// Just a name, will appear on the default output
+workspace "browser"
+```
+
+### Workspace with Output
+
+```kdl
+// Open on a specific monitor
+workspace "chat" {
+    open-on-output "DP-2"
+}
+```
+
+### Workspace with Custom Layout
+
+```kdl
+workspace "focus" {
+    open-on-output "eDP-1"
+    
+    layout {
+        // Larger gaps for better focus
+        gaps 32
+        
+        // Always center single windows
+        always-center-single-column
+        
+        // Prominent borders
+        border {
+            on
+            width 4
+            active-color "#7fc8ff"
+        }
+    }
+}
+```

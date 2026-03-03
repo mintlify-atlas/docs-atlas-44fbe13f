@@ -1,122 +1,107 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "niri",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
-  },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "tabs": [
-      {
-        "tab": "Guides",
-        "groups": [
-          {
-            "group": "Getting started",
-            "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API reference",
-        "groups": [
-          {
-            "group": "API documentation",
-            "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoint examples",
-            "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
-            ]
-          }
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "primary": "#7c3aed",
+    "light": "#a78bfa",
+    "dark": "#6d28d9"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/niri-wm/niri"
     }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/niri-wm/niri"
     }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "getting-started",
+              "important-software"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/workspaces",
+              "concepts/overview",
+              "concepts/tabs",
+              "concepts/floating-windows",
+              "concepts/fullscreen-and-maximize",
+              "concepts/gestures"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/introduction",
+              "configuration/overview",
+              "configuration/input",
+              "configuration/outputs",
+              "configuration/key-bindings",
+              "configuration/switch-events",
+              "configuration/layout",
+              "configuration/window-rules",
+              "configuration/layer-rules",
+              "configuration/animations",
+              "configuration/gestures",
+              "configuration/recent-windows",
+              "configuration/named-workspaces",
+              "configuration/include",
+              "configuration/debug-options",
+              "configuration/miscellaneous"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/accessibility",
+              "features/screencasting",
+              "features/xwayland",
+              "features/ipc"
+            ]
+          },
+          {
+            "group": "Integration",
+            "pages": [
+              "integration/integrating-niri",
+              "integration/layer-shell-components",
+              "integration/example-systemd-setup"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/nvidia",
+              "troubleshooting/application-issues",
+              "troubleshooting/faq"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/developing-niri",
+              "development/packaging-niri",
+              "development/design-principles",
+              "development/animation-timing",
+              "development/fractional-layout",
+              "development/redraw-loop",
+              "development/documenting-niri"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

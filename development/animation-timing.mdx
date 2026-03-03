@@ -1,0 +1,148 @@
+---
+title: Animation Timing
+description: How niri implements frame-perfect animation timing aligned to monitor refresh cycles
+---
+
+<Info>
+*Time, Dr. Freeman? Is it really that... time again?*
+</Info>
+
+## Overview
+
+A compositor deals with one or more monitors on mostly fixed refresh cycles. For example, a 170 Hz monitor can draw a frame every ~5.88 ms.
+
+Most of the time, the compositor doesn't actually redraw the monitor: when nothing changes on screen (e.g. you're reading a document and aren't moving your cursor), it would be wasteful to wake up the GPU to composite the same image.
+
+<Note>
+During an animation however, screen contents do change every frame. Niri will generally start drawing the next frame as soon as the previous one shows up on screen.
+</Note>
+
+## Frame-Perfect Timing
+
+Since the monitor refresh cycle is fixed in most cases (even with VRR, there's a maximum refresh rate), the compositor can predict when the next frame will show up on the monitor, and render ongoing animations for that exact moment in time.
+
+<Card title="Benefits of predictive timing" icon="clock">
+  All animation frames are perfectly timed with no jitter, regardless of when exactly the rendering code had a chance to run.
+  
+  For example, even if the compositor has to process new window events, delaying the rendering by a few ms, the animation timing will remain exactly aligned to the monitor refresh cycle.
+</Card>
+
+## Design Requirements
+
+There are several properties that a compositor wants from its timing system:
+
+<Steps>
+  <Step title="Future time queries">
+    It should be possible to get the state of the animations at a specific time in the near future, for rendering a frame exactly timed to when the monitor will show it.
+    
+    <Info>
+    This time override ability should be usable in tests to advance the time in a fully controlled fashion.
+    </Info>
+  </Step>
+  
+  <Step title="Action-synchronized animation start">
+    Animations in response to user actions should begin at the moment when the action happens.
+    
+    For example, pressing a workspace switch key should start the animation at the instant when the user pressed the key (rather than, say, slightly in the future where we predicted the next monitor frame, which we had already rendered by now).
+  </Step>
+  
+  <Step title="Consistent time during processing">
+    During the processing of a single action, querying the current time should return the exact same value.
+    
+    Even if the processing finishes a few microseconds after it started, querying the time in the end should return the same thing.
+    
+    <Note>
+    This generally makes writing code much more sane; otherwise you'd need to for example avoid reading the position of some element twice in a row, since it could have moved by one pixel in-between, screwing with the logic.
+    
+    Also, fetching the current system time [can be quite expensive](https://mastodon.online/@YaLTeR/109934977035721850) in terms of overhead.
+    </Note>
+  </Step>
+  
+  <Step title="Animation speed control">
+    It should be reasonably easy to implement an animation slow-down preference, so all animations can be slowed down or sped up by the same factor.
+  </Step>
+</Steps>
+
+## The LazyClock Solution
+
+The solution in niri is a `LazyClock`, a clock that remembers one timestamp.
+
+### How it works
+
+<Tabs>
+  <Tab title="Initial state">
+    Initially, the timestamp is empty, so when you ask `LazyClock` for the current time, it will:
+    1. Fetch and return the system time
+    2. Remember it for future queries
+  </Tab>
+  
+  <Tab title="Subsequent queries">
+    After the first query, `LazyClock` will keep returning the same timestamp that it had remembered.
+    
+    This ensures consistency during a single action's processing.
+  </Tab>
+  
+  <Tab title="Clearing the timestamp">
+    You can clear the timestamp, then `LazyClock` will fetch the system time anew when it's needed.
+    
+    <Info>
+    In niri, the timestamp is cleared at the end of every event loop iteration, right before going to sleep waiting for new events.
+    </Info>
+  </Tab>
+  
+  <Tab title="Manual timestamp setting">
+    You can also just manually set the timestamp to a specific value.
+    
+    **Use cases:**
+    - Rendering a frame for the predicted time of when the monitor will show it
+    - Testing: tests simply always set the timestamp and never use the system time
+  </Tab>
+</Tabs>
+
+### Event Loop Behavior
+
+```rust
+// Pseudocode of event loop integration
+loop {
+    // Wait for events
+    wait_for_events();
+    
+    // Process events - LazyClock will fetch time on first query
+    process_events();
+    
+    // Clear the timestamp before next iteration
+    lazy_clock.clear();
+}
+```
+
+<Note>
+This way, anything that happens next (like a user key press) will fetch and use the most up-to-date timestamp as soon as one is needed, but then the processing code will keep getting the exact same timestamp, since `LazyClock` stores it.
+</Note>
+
+## AdjustableClock Wrapper
+
+Finally, there's an `AdjustableClock` wrapper on top that provides the ability to control the slow-down rate by modifying the timestamps returned by the clock.
+
+<Warning>
+**Important detail:** With rate changes, timestamps from the `AdjustableClock` will drift away and become unrelated to the system time.
+
+However, our target timestamp (for rendering) comes from the system time, so the override works directly on the underlying `LazyClock`.
+</Warning>
+
+### API Design
+
+Overriding the timestamp and then querying the `AdjustableClock` will return a **different** timestamp that is correct and consistent with the adjustments made by `AdjustableClock`.
+
+This is reflected in the API by naming:
+- `Clock::set_unadjusted()` - Set the raw timestamp
+- `Clock::now_unadjusted()` - Get the raw timestamp
+
+## Sharing Across Animations
+
+<Card title="Reference-counted clock" icon="share-nodes">
+  The clock is shared among all animations in niri through passing around and storing a reference-counted pointer.
+  
+  **Benefits:**
+  - Overriding the time automatically applies to everything
+  - In tests we can use a separate clock per test so that they don't interfere with each other
+</Card>

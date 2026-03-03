@@ -1,0 +1,205 @@
+---
+title: Configuration Introduction
+description: Learn how to configure niri with KDL configuration files
+---
+
+## Per-Section Documentation
+
+You can find documentation for various sections of the config:
+
+<CardGroup cols={2}>
+  <Card title="Input" icon="keyboard" href="/configuration/input">
+    Configure keyboard, mouse, touchpad, and other input devices
+  </Card>
+  <Card title="Outputs" icon="display" href="/configuration/outputs">
+    Set up monitors, resolution, refresh rate, and positioning
+  </Card>
+  <Card title="Key Bindings" icon="command" href="/configuration/key-bindings">
+    Configure keyboard shortcuts and mouse bindings
+  </Card>
+  <Card title="Switch Events" icon="laptop" href="/configuration/switch-events">
+    Handle laptop lid and tablet mode events
+  </Card>
+  <Card title="Layout" icon="grid" href="/configuration/layout">
+    Control gaps, borders, focus ring, and window arrangement
+  </Card>
+  <Card title="Window Rules" icon="window-restore" href="/configuration/window-rules">
+    Customize behavior for specific windows
+  </Card>
+</CardGroup>
+
+## Loading
+
+Niri will load configuration from the following locations in order:
+
+1. `$XDG_CONFIG_HOME/niri/config.kdl`
+2. `~/.config/niri/config.kdl`
+3. `/etc/niri/config.kdl` (fallback)
+
+If both of these files are missing, niri will create `$XDG_CONFIG_HOME/niri/config.kdl` with the contents of the default configuration file, which are embedded into the niri binary at build time.
+
+<Note>
+  Please use the default configuration file as the starting point for your custom configuration.
+</Note>
+
+### Live Reload
+
+The configuration is **live-reloaded**. Simply edit and save the config file, and your changes will be applied. This includes:
+
+- Key bindings
+- Output settings like mode
+- Window rules
+- Everything else
+
+### Validation
+
+You can run `niri validate` to parse the config and see any errors.
+
+```bash
+niri validate
+```
+
+### Custom Config Path
+
+<Tabs>
+  <Tab title="Command Line">
+    To use a different config file path, pass it in the `--config` or `-c` argument:
+    
+    ```bash
+    niri --config /path/to/custom/config.kdl
+    ```
+  </Tab>
+  <Tab title="Environment Variable">
+    You can also set `$NIRI_CONFIG` to the path of the config file:
+    
+    ```bash
+    export NIRI_CONFIG=/path/to/custom/config.kdl
+    niri
+    ```
+    
+    <Note>
+      `--config` always takes precedence. If `$NIRI_CONFIG` is set to an empty string, it is ignored and the default config location is used instead.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Syntax
+
+The config is written in [KDL](https://kdl.dev).
+
+### Comments
+
+Lines starting with `//` are comments and are ignored.
+
+```kdl
+// This is a comment
+input {
+    // Focus follows mouse is enabled here
+    focus-follows-mouse
+}
+```
+
+You can also put `/-` in front of a section to comment out the entire section:
+
+```kdl
+/-output "eDP-1" {
+    // Everything inside here is ignored.
+    // The display won't be turned off
+    // as the whole section is commented out.
+    off
+}
+```
+
+### Flags
+
+Toggle options in niri are commonly represented as flags. Writing out the flag enables it, and omitting it or commenting it out disables it.
+
+<CodeGroup>
+```kdl Enabled
+// "Focus follows mouse" is enabled.
+input {
+    focus-follows-mouse
+
+    // Other settings...
+}
+```
+
+```kdl Disabled
+// "Focus follows mouse" is disabled.
+input {
+    // focus-follows-mouse
+
+    // Other settings...
+}
+```
+</CodeGroup>
+
+### Sections
+
+Most sections cannot be repeated. For example:
+
+<CodeGroup>
+```kdl Valid
+// This is valid: every section appears once.
+input {
+    keyboard {
+        // ...
+    }
+
+    touchpad {
+        // ...
+    }
+}
+```
+
+```kdl Invalid
+// This is NOT valid: input section appears twice.
+input {
+    keyboard {
+        // ...
+    }
+}
+
+input {
+    touchpad {
+        // ...
+    }
+}
+```
+</CodeGroup>
+
+**Exceptions** are sections that configure different devices by name:
+
+```kdl
+output "eDP-1" {
+    // ...
+}
+
+// This is valid: this section configures a different output.
+output "HDMI-A-1" {
+    // ...
+}
+
+// This is NOT valid: "eDP-1" already appeared above.
+output "eDP-1" {
+    // ...
+}
+```
+
+## Defaults
+
+Omitting most of the sections of the config file will leave you with the default values for that section.
+
+<Warning>
+  A notable exception is `binds {}`: they do not get filled with defaults, so make sure you do not erase this section.
+</Warning>
+
+## Breaking Change Policy
+
+As a rule, niri updates should not break existing config files. For example, the default config from niri v0.1.0 still parses fine on v25.02.
+
+**Exceptions** can be made for parsing bugs. For example, niri used to accept multiple binds to the same key, but this was not intended and did not do anything (the first bind was always used). A patch release changed niri from silently accepting this to causing a parsing failure.
+
+<Note>
+  Keep in mind that the breaking change policy applies only to niri releases. Commits between releases can and do occasionally break the config as new features are ironed out.
+</Note>

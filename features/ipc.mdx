@@ -1,0 +1,630 @@
+---
+title: IPC (Inter-Process Communication)
+description: Communicate with niri programmatically using the IPC socket and niri msg commands
+---
+
+## Overview
+
+You can communicate with the running niri instance over an IPC socket using the `niri msg` command. This allows you to:
+
+- Query compositor state (outputs, workspaces, windows)
+- Perform actions (focus windows, move workspaces, etc.)
+- Subscribe to real-time events
+- Control output configuration
+
+## Basic Usage
+
+Check available commands:
+
+```bash
+niri msg --help
+```
+
+The `--json` flag prints responses in JSON format rather than human-readable:
+
+```bash
+niri msg --json outputs
+```
+
+<Tip>
+If you're getting parsing errors from `niri msg` after upgrading niri, make sure you've restarted niri itself. You might be running a newer `niri msg` against an older `niri` compositor.
+</Tip>
+
+## Available Commands
+
+Here are all the `niri msg` subcommands:
+
+### Query Commands
+
+<CardGroup cols={2}>
+  <Card title="outputs" icon="desktop">
+    List connected outputs
+    
+    ```bash
+    niri msg outputs
+    niri msg --json outputs
+    ```
+  </Card>
+  
+  <Card title="workspaces" icon="table-columns">
+    List all workspaces
+    
+    ```bash
+    niri msg workspaces
+    ```
+  </Card>
+  
+  <Card title="windows" icon="window-restore">
+    List open windows
+    
+    ```bash
+    niri msg windows
+    niri msg --json windows
+    ```
+  </Card>
+  
+  <Card title="layers" icon="layer-group">
+    List open layer-shell surfaces
+    
+    ```bash
+    niri msg layers
+    ```
+  </Card>
+  
+  <Card title="keyboard-layouts" icon="keyboard">
+    Get configured keyboard layouts
+    
+    ```bash
+    niri msg keyboard-layouts
+    ```
+  </Card>
+  
+  <Card title="focused-output" icon="bullseye">
+    Print information about the focused output
+    
+    ```bash
+    niri msg focused-output
+    ```
+  </Card>
+  
+  <Card title="focused-window" icon="window-maximize">
+    Print information about the focused window
+    
+    ```bash
+    niri msg --json focused-window
+    ```
+  </Card>
+  
+  <Card title="overview-state" icon="grid">
+    Print the overview state (open/closed)
+    
+    ```bash
+    niri msg overview-state
+    ```
+  </Card>
+  
+  <Card title="casts" icon="video">
+    List active screencasts
+    
+    ```bash
+    niri msg casts
+    ```
+  </Card>
+  
+  <Card title="version" icon="tag">
+    Print the version of the running niri instance
+    
+    ```bash
+    niri msg version
+    ```
+  </Card>
+</CardGroup>
+
+### Interactive Commands
+
+<CardGroup cols={2}>
+  <Card title="pick-window" icon="hand-pointer">
+    Pick a window with the mouse and print its information
+    
+    ```bash
+    # Get window ID interactively
+    WINDOW_ID=$(niri msg --json pick-window | jq -r .id)
+    ```
+  </Card>
+  
+  <Card title="pick-color" icon="eye-dropper">
+    Pick a color from the screen with the mouse
+    
+    ```bash
+    niri msg --json pick-color
+    ```
+  </Card>
+</CardGroup>
+
+### Action Commands
+
+Perform any niri action via IPC:
+
+```bash
+niri msg action <ACTION> [OPTIONS]
+```
+
+<AccordionGroup>
+  <Accordion title="Window Management Actions">
+    ```bash
+    # Focus a window by ID
+    niri msg action focus-window --id 12345
+    
+    # Close the focused window
+    niri msg action close-window
+    
+    # Close a specific window
+    niri msg action close-window --id 12345
+    
+    # Toggle fullscreen
+    niri msg action fullscreen-window
+    
+    # Toggle windowed (fake) fullscreen
+    niri msg action toggle-windowed-fullscreen
+    
+    # Focus navigation
+    niri msg action focus-column-left
+    niri msg action focus-column-right
+    niri msg action focus-window-down
+    niri msg action focus-window-up
+    
+    # Move windows
+    niri msg action move-window-down
+    niri msg action move-window-up
+    niri msg action move-column-left
+    niri msg action move-column-right
+    ```
+  </Accordion>
+  
+  <Accordion title="Workspace Actions">
+    ```bash
+    # Focus workspace by index
+    niri msg action focus-workspace 3
+    
+    # Focus workspace by name
+    niri msg action focus-workspace "Development"
+    
+    # Navigate workspaces
+    niri msg action focus-workspace-down
+    niri msg action focus-workspace-up
+    niri msg action focus-workspace-previous
+    
+    # Move window to workspace
+    niri msg action move-window-to-workspace 2
+    niri msg action move-window-to-workspace "Browser"
+    
+    # Move without following focus
+    niri msg action move-window-to-workspace --no-focus 5
+    
+    # Move entire column
+    niri msg action move-column-to-workspace 3
+    
+    # Set/unset workspace name
+    niri msg action set-workspace-name "My Workspace"
+    niri msg action unset-workspace-name
+    ```
+  </Accordion>
+  
+  <Accordion title="Monitor Actions">
+    ```bash
+    # Focus monitors
+    niri msg action focus-monitor-left
+    niri msg action focus-monitor-right
+    niri msg action focus-monitor-up
+    niri msg action focus-monitor-down
+    
+    # Move window to monitor
+    niri msg action move-window-to-monitor "HDMI-A-1"
+    niri msg action move-window-to-monitor-left
+    
+    # Move workspace to monitor
+    niri msg action move-workspace-to-monitor "DP-1"
+    ```
+  </Accordion>
+  
+  <Accordion title="Layout Actions">
+    ```bash
+    # Resize window
+    niri msg action set-window-height 800
+    niri msg action set-window-height +100
+    niri msg action set-window-height -- -50
+    niri msg action set-window-width 50%
+    
+    # Reset window height
+    niri msg action reset-window-height
+    
+    # Column display modes
+    niri msg action toggle-column-tabbed-display
+    niri msg action set-column-display normal
+    niri msg action set-column-display tabbed
+    
+    # Center windows
+    niri msg action center-column
+    niri msg action center-window
+    
+    # Maximize
+    niri msg action maximize-column
+    niri msg action maximize-window-to-edges
+    ```
+  </Accordion>
+  
+  <Accordion title="Screencast Actions">
+    ```bash
+    # Dynamic cast target
+    niri msg action set-dynamic-cast-window
+    niri msg action set-dynamic-cast-monitor
+    niri msg action clear-dynamic-cast-target
+    
+    # Interactive window selection
+    niri msg action set-dynamic-cast-window --id $(niri msg --json pick-window | jq .id)
+    
+    # Stop a screencast
+    niri msg action stop-cast --session-id 12345
+    ```
+  </Accordion>
+  
+  <Accordion title="Screenshot Actions">
+    ```bash
+    # Open screenshot UI
+    niri msg action screenshot
+    
+    # Screenshot the focused screen
+    niri msg action screenshot-screen
+    
+    # Screenshot window
+    niri msg action screenshot-window
+    niri msg action screenshot-window --id 12345
+    
+    # Custom save path
+    niri msg action screenshot-screen --path /tmp/screenshot.png
+    ```
+  </Accordion>
+  
+  <Accordion title="System Actions">
+    ```bash
+    # Spawn commands
+    niri msg action spawn -- alacritty
+    niri msg action spawn-sh "notify-send Hello"
+    
+    # Power management
+    niri msg action power-off-monitors
+    niri msg action power-on-monitors
+    
+    # Compositor control
+    niri msg action quit
+    niri msg action quit --skip-confirmation
+    niri msg action load-config-file
+    niri msg action load-config-file --path /path/to/config.kdl
+    
+    # Keyboard layout
+    niri msg action switch-layout next
+    niri msg action switch-layout prev
+    ```
+  </Accordion>
+  
+  <Accordion title="Floating Window Actions">
+    ```bash
+    # Toggle floating
+    niri msg action toggle-window-floating
+    
+    # Move to/from floating
+    niri msg action move-window-to-floating
+    niri msg action move-window-to-tiling
+    
+    # Switch focus
+    niri msg action focus-floating
+    niri msg action focus-tiling
+    niri msg action switch-focus-between-floating-and-tiling
+    
+    # Move floating window
+    niri msg action move-floating-window --x +100 --y -50
+    niri msg action move-floating-window --x 10% --y 20%
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Output Configuration
+
+Change output configuration temporarily (not saved to config):
+
+```bash
+niri msg output <OUTPUT_NAME> <ACTION>
+```
+
+<CodeGroup>
+
+```bash Power Control
+# Turn output off
+niri msg output HDMI-A-1 off
+
+# Turn output on
+niri msg output HDMI-A-1 on
+```
+
+```bash Mode Settings
+# Set specific mode
+niri msg output DP-1 mode 1920x1080@144
+
+# Set automatic mode
+niri msg output DP-1 mode auto
+
+# Custom mode
+niri msg output DP-1 custom-mode 1920 1080 60
+```
+
+```bash Scale & Transform
+# Set scale
+niri msg output eDP-1 scale 1.5
+niri msg output eDP-1 scale auto
+
+# Set transform (rotation)
+niri msg output HDMI-A-1 transform 90
+niri msg output HDMI-A-1 transform normal
+```
+
+```bash Position
+# Set position
+niri msg output DP-1 position set 0 0
+niri msg output HDMI-A-1 position set 1920 0
+
+# Automatic positioning
+niri msg output DP-1 position auto
+```
+
+```bash VRR (Variable Refresh Rate)
+# Enable VRR
+niri msg output DP-1 vrr on
+
+# Enable VRR on-demand only
+niri msg output DP-1 vrr on --on-demand
+
+# Disable VRR
+niri msg output DP-1 vrr off
+```
+
+</CodeGroup>
+
+## Event Stream
+
+<Note>
+Available since version 0.1.9
+</Note>
+
+The event stream request makes niri continuously stream events into the IPC connection until it is closed. This is useful for implementing bars and indicators that update in real-time without polling.
+
+### Key Features
+
+- **Complete state up-front**: The event stream gives you the complete current state first, then follows up with updates
+- **No polling needed**: Events are pushed to you as they happen
+- **Atomic updates**: Most state updates are atomic (though not always)
+
+### Usage
+
+```bash
+# Debug view of events (human-readable)
+niri msg event-stream
+
+# JSON events for programmatic use
+niri msg --json event-stream
+```
+
+### Example: Monitor Workspaces
+
+```bash
+#!/bin/bash
+
+niri msg --json event-stream | while IFS= read -r line; do
+    event_type=$(echo "$line" | jq -r 'keys[0]')
+    
+    case "$event_type" in
+        WorkspacesChanged)
+            echo "Workspaces updated:"
+            echo "$line" | jq '.WorkspacesChanged.workspaces[] | "\(.idx): \(.name // "<unnamed>")"'
+            ;;
+        WindowOpenedOrChanged)
+            window_title=$(echo "$line" | jq -r '.WindowOpenedOrChanged.window.title')
+            echo "Window opened/changed: $window_title"
+            ;;
+        WorkspaceActivated)
+            workspace_id=$(echo "$line" | jq -r '.WorkspaceActivated.id')
+            echo "Workspace activated: $workspace_id"
+            ;;
+    esac
+done
+```
+
+### Available Events
+
+<CardGroup cols={2}>
+  <Card title="WorkspacesChanged" icon="table-columns">
+    Complete workspace configuration update
+  </Card>
+  
+  <Card title="WorkspaceActivated" icon="check">
+    A workspace was activated on an output
+  </Card>
+  
+  <Card title="WindowsChanged" icon="window-restore">
+    Complete window configuration update
+  </Card>
+  
+  <Card title="WindowOpenedOrChanged" icon="plus">
+    A window was opened or changed
+  </Card>
+  
+  <Card title="WindowClosed" icon="xmark">
+    A window was closed
+  </Card>
+  
+  <Card title="WindowFocusChanged" icon="bullseye">
+    Window focus changed
+  </Card>
+  
+  <Card title="KeyboardLayoutsChanged" icon="keyboard">
+    Keyboard layouts configuration changed
+  </Card>
+  
+  <Card title="KeyboardLayoutSwitched" icon="rotate">
+    Active keyboard layout switched
+  </Card>
+  
+  <Card title="OverviewOpenedOrClosed" icon="grid">
+    Overview was opened or closed
+  </Card>
+  
+  <Card title="ConfigLoaded" icon="file">
+    Configuration was (re)loaded
+  </Card>
+  
+  <Card title="ScreenshotCaptured" icon="camera">
+    A screenshot was captured
+  </Card>
+  
+  <Card title="CastsChanged" icon="video">
+    Screencasts configuration changed
+  </Card>
+</CardGroup>
+
+<Card title="Full Event Documentation" icon="book" href="https://niri-wm.github.io/niri/niri_ipc/enum.Event.html">
+  View the complete list of events with detailed documentation
+</Card>
+
+## Programmatic Access
+
+For more complex scripts and modules, you can access the socket directly instead of using `niri msg --json`.
+
+### Socket Protocol
+
+<Steps>
+  <Step title="Connect to Socket">
+    Connect to the UNIX domain socket at `$NIRI_SOCKET`:
+    
+    ```bash
+    echo $NIRI_SOCKET
+    # /run/user/1000/niri.wayland-1.2474.sock
+    ```
+  </Step>
+  
+  <Step title="Write Request">
+    Write your request encoded in JSON on a single line, followed by a newline or by flushing/shutting down the write end.
+  </Step>
+  
+  <Step title="Read Reply">
+    Read the reply as JSON, also on a single line.
+  </Step>
+</Steps>
+
+### Testing with socat
+
+```bash
+# Simple request
+$ socat STDIO "$NIRI_SOCKET"
+"FocusedWindow"
+{"Ok":{"FocusedWindow":{"id":12,"title":"Terminal","app_id":"Alacritty","workspace_id":6,"is_focused":true}}}
+```
+
+### Finding Request Format
+
+You can use `socat` to see how `niri msg` formats requests:
+
+```bash
+# Terminal 1: Create a test socket
+$ socat STDIO UNIX-LISTEN:temp.sock
+
+# Terminal 2: Send a command
+$ env NIRI_SOCKET=./temp.sock niri msg action focus-workspace 2
+
+# Terminal 1 shows:
+{"Action":{"FocusWorkspace":{"reference":{"Index":2}}}}
+```
+
+### Python Example
+
+```python
+import socket
+import json
+import os
+
+def niri_request(request):
+    sock_path = os.environ['NIRI_SOCKET']
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(sock_path)
+    
+    # Send request
+    sock.sendall((json.dumps(request) + '\n').encode())
+    sock.shutdown(socket.SHUT_WR)
+    
+    # Read response
+    response = b''
+    while True:
+        chunk = sock.recv(4096)
+        if not chunk:
+            break
+        response += chunk
+    
+    sock.close()
+    return json.loads(response)
+
+# Get focused window
+result = niri_request("FocusedWindow")
+if 'Ok' in result and result['Ok']['FocusedWindow']:
+    window = result['Ok']['FocusedWindow']
+    print(f"Focused window: {window['title']}")
+
+# Perform an action
+result = niri_request({
+    "Action": {
+        "FocusWorkspace": {
+            "reference": {"Index": 3}
+        }
+    }
+})
+```
+
+### Response Format
+
+The reply is an `Ok` or an `Err` wrapping the same JSON object as you get from `niri msg --json`:
+
+```json
+// Success
+{"Ok":{"FocusedWindow":{"id":12,"title":"Terminal",...}}}
+
+// Error
+{"Err":"window with id 99999 not found"}
+```
+
+<Card title="API Documentation" icon="code" href="https://niri-wm.github.io/niri/niri_ipc/">
+  View the complete niri-ipc sub-crate documentation for all request and response types
+</Card>
+
+## Backwards Compatibility
+
+### JSON Output Stability
+
+The JSON output **should** remain stable:
+
+<Check>Existing fields and enum variants will not be renamed</Check>
+<Check>Non-optional existing fields will not be removed</Check>
+
+<Warning>
+New fields and enum variants **will** be added. Handle unknown fields gracefully.
+</Warning>
+
+### Human-Readable Output
+
+The formatted output (without `--json` flag) is **not** considered stable. Always use `--json` for scripts.
+
+### Rust API
+
+The `niri-ipc` sub-crate follows niri's version and is **not** API-stable in terms of Rust semver. New struct fields and enum variants will be added in patch releases.
+
+```toml
+# Use exact version in Cargo.toml
+[dependencies]
+niri-ipc = "=25.11.0"
+```

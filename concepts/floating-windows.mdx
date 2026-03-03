@@ -1,0 +1,64 @@
+---
+title: Floating Windows
+description: Manage windows that float on top of the tiled layout
+---
+
+<Note>
+Available since version 25.01
+</Note>
+
+Floating windows in niri always show on top of the tiled windows.
+The floating layout does not scroll.
+Each workspace/monitor has its own floating layout, just like each workspace/monitor has its own tiling layout.
+
+## Automatic Floating
+
+New windows will automatically float if they:
+
+<CardGroup cols={2}>
+  <Card title="Have a Parent" icon="window">
+    Windows with a parent window, such as dialog boxes
+  </Card>
+  <Card title="Fixed Size" icon="expand">
+    Windows with a fixed size, such as splash screens
+  </Card>
+</CardGroup>
+
+## Manual Control
+
+<Steps>
+  <Step title="Toggle Floating">
+    Use the `toggle-window-floating` bind to switch between floating and tiling
+  </Step>
+  <Step title="Right-Click While Dragging">
+    Right click while dragging/moving the window to toggle its state
+  </Step>
+</Steps>
+
+### Window Rules
+
+<Info>
+You can use the `open-floating true/false` window rule to:
+- Force a window to open as floating
+- Disable the automatic floating logic
+</Info>
+
+## Focus Management
+
+Use `switch-focus-between-floating-and-tiling` to switch the focus between the two layouts.
+
+<Note>
+When focused on the floating layout, binds (like `focus-column-right`) will operate on the floating window.
+</Note>
+
+## Precise Positioning
+
+You can precisely position a floating window with a command:
+
+```bash
+niri msg action move-floating-window -x 100 -y 200
+```
+
+<Tip>
+This is useful for scripting or creating specific window layouts programmatically.
+</Tip>

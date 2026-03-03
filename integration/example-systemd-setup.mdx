@@ -1,0 +1,199 @@
+---
+title: Example systemd Setup
+description: Learn how to set up desktop components as systemd services with niri
+---
+
+When starting niri from a display manager like GDM, or otherwise through the `niri-session` binary, it runs as a systemd service. This provides the necessary systemd integration to run programs like `mako` and services like `xdg-desktop-portal` bound to the graphical session.
+
+<Info>
+Unlike [`spawn-at-startup`](/configuration/miscellaneous#spawn-at-startup), using systemd services lets you easily monitor their status and output, and restart or reload them.
+</Info>
+
+Here's an example on how you might set up `mako`, `waybar`, `swaybg`, and `swayidle` to run as systemd services with niri.
+
+## Setting Up Components
+
+### Step 1: Install Components
+
+First, install the components you want to use:
+
+```bash
+sudo dnf install mako waybar swaybg swayidle
+```
+
+<Note>
+Adjust the package manager command for your distribution (e.g., `apt`, `pacman`, `zypper`).
+</Note>
+
+### Step 2: Components with Built-in Units
+
+`mako` and `waybar` provide systemd units out of the box, so you can simply add them to the niri session:
+
+```bash
+systemctl --user add-wants niri.service mako.service
+systemctl --user add-wants niri.service waybar.service
+```
+
+<Info>
+This will create links in `~/.config/systemd/user/niri.service.wants/`, a special systemd folder for services that need to start together with `niri.service`.
+</Info>
+
+### Step 3: Create Custom Service for swaybg
+
+`swaybg` does not provide a systemd unit, since you need to pass the background image as a command-line argument. So we will make our own.
+
+<Steps>
+  <Step title="Create the service file">
+    Create `~/.config/systemd/user/swaybg.service` with the following contents:
+
+    ```systemd
+    [Unit]
+    PartOf=graphical-session.target
+    After=graphical-session.target
+    Requisite=graphical-session.target
+
+    [Service]
+    ExecStart=/usr/bin/swaybg -m fill -i "%h/Pictures/LakeSide.png"
+    Restart=on-failure
+    ```
+
+    <Note>
+    Replace the image path with the one you want. `%h` is expanded to your home directory.
+    </Note>
+  </Step>
+  
+  <Step title="Reload systemd">
+    After editing `swaybg.service`, run:
+
+    ```bash
+    systemctl --user daemon-reload
+    ```
+
+    This ensures systemd picks up the changes in the file.
+  </Step>
+  
+  <Step title="Add to niri session">
+    Now, add it to the niri session:
+
+    ```bash
+    systemctl --user add-wants niri.service swaybg.service
+    ```
+  </Step>
+</Steps>
+
+### Step 4: Create Custom Service for swayidle
+
+`swayidle` similarly does not provide a service, so we will also make our own.
+
+<Steps>
+  <Step title="Create the service file">
+    Create `~/.config/systemd/user/swayidle.service` with the following contents:
+
+    ```systemd
+    [Unit]
+    PartOf=graphical-session.target
+    After=graphical-session.target
+    Requisite=graphical-session.target
+
+    [Service]
+    ExecStart=/usr/bin/swayidle -w timeout 601 'niri msg action power-off-monitors' timeout 600 'swaylock -f' before-sleep 'swaylock -f'
+    Restart=on-failure
+    ```
+  </Step>
+  
+  <Step title="Reload and enable">
+    Then, run:
+
+    ```bash
+    systemctl --user daemon-reload
+    systemctl --user add-wants niri.service swayidle.service
+    ```
+  </Step>
+</Steps>
+
+## Managing Services
+
+<Tip>
+Now these utilities will be started together with the niri session and stopped when it exits.
+</Tip>
+
+### Restart a Service
+
+You can restart services with a command like this (for example, after editing their config files):
+
+```bash
+systemctl --user restart waybar.service
+```
+
+### Check Service Status
+
+```bash
+systemctl --user status mako.service
+```
+
+### View Service Logs
+
+```bash
+journalctl --user -u waybar.service
+```
+
+### Remove a Service
+
+To remove a service from niri startup:
+
+<Steps>
+  <Step title="Remove the symbolic link">
+    Remove its symbolic link from `~/.config/systemd/user/niri.service.wants/`:
+
+    ```bash
+    rm ~/.config/systemd/user/niri.service.wants/waybar.service
+    ```
+  </Step>
+  
+  <Step title="Reload systemd">
+    Then, run:
+
+    ```bash
+    systemctl --user daemon-reload
+    ```
+  </Step>
+</Steps>
+
+## Running Programs Across Logout
+
+When running niri as a session, exiting it (logging out) will kill all programs that you've started within. However, sometimes you want a program, like `tmux`, `dtach` or similar, to persist in this case.
+
+<Tip>
+To run a program that persists after logout, run it in a transient systemd scope:
+</Tip>
+
+```bash
+systemd-run --user --scope tmux new-session
+```
+
+<Info>
+This detaches the program from your session's lifecycle, allowing it to continue running even after you log out.
+</Info>
+
+## systemd Unit Template Reference
+
+Here's a template you can use for creating your own systemd services:
+
+```systemd
+[Unit]
+Description=My Custom Service
+PartOf=graphical-session.target
+After=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/my-program --with-args
+Restart=on-failure
+
+[Install]
+WantedBy=niri.service
+```
+
+<Note>
+Replace `my-program --with-args` with your actual command and arguments.
+</Note>

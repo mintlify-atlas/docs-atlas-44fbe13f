@@ -1,0 +1,55 @@
+---
+title: Tabs
+description: Switch columns to display windows as tabs instead of vertical tiles
+---
+
+<Note>
+Available since version 25.02
+</Note>
+
+You can switch a column to present windows as tabs, rather than as vertical tiles.
+All tabs in a column have the same window size, so this is useful to get more vertical space.
+
+## Enabling Tabs
+
+Use this bind to toggle a column between normal and tabbed display:
+
+```kdl
+binds {
+   Mod+W { toggle-column-tabbed-display; }
+}
+```
+
+## Working with Tabs
+
+<Info>
+All other binds remain the same:
+- Switch tabs with `focus-window-down/up`
+- Add or remove windows with `consume-window-into-column`/`expel-window-from-column`
+- And so on...
+</Info>
+
+<Tip>
+Unlike regular columns, tabbed columns can go full-screen with multiple windows.
+</Tip>
+
+## Tab Indicator
+
+Tabbed columns show a tab indicator on the side.
+You can click on the indicator to switch tabs.
+
+### Configuration
+
+See the `tab-indicator` section in the layout section to configure the tab indicator.
+
+<Accordion title="Indicator Placement">
+By default, the indicator draws "outside" the column, so it can overlay other windows or go off-screen.
+
+The `place-within-column` flag puts the indicator "inside" the column, adjusting the window size to make space for it.
+This is especially useful for thicker tab indicators, or when you have very small gaps.
+
+| Behavior | Description |
+|----------|-------------|
+| **Default** | Tab indicator overflows onto adjacent columns |
+| **place-within-column** | Tab indicator is contained within its respective column |
+</Accordion>

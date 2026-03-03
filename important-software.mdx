@@ -1,0 +1,298 @@
+---
+title: Essential Software
+description: Required and recommended software for a complete niri desktop experience
+---
+
+niri is a Wayland compositor, not a complete desktop environment. To have a fully functional desktop, you'll need to install and configure additional software components.
+
+<Warning>
+  Most of this software is essential for normal desktop functionality. Flatpak apps, screen sharing, notifications, and file pickers will not work without the proper components installed.
+</Warning>
+
+## Notification Daemon
+
+Many applications rely on notifications to communicate with users. Without a notification daemon, you won't see notifications from apps.
+
+<Card title="mako" icon="bell" href="https://github.com/emersion/mako">
+  A lightweight Wayland notification daemon that works well with niri
+</Card>
+
+### Setup
+
+Start mako using one of these methods:
+
+<Tabs>
+  <Tab title="systemd">
+    Create a systemd user service for mako. See the [Example systemd Setup](/integration/example-systemd-setup) page for details.
+  </Tab>
+  <Tab title="spawn-at-startup">
+    Add to your `~/.config/niri/config.kdl`:
+    
+    ```kdl
+    spawn-at-startup "mako"
+    ```
+  </Tab>
+</Tabs>
+
+## Portals
+
+Portals provide a cross-desktop API for applications to access system functionality like file pickers, screen sharing, and UI settings. **Flatpak apps require working portals.**
+
+<Note>
+  Portals require running niri as a session (via `niri-session` script or from a display manager). They will not work if you run niri in windowed mode.
+</Note>
+
+### Required Portal Packages
+
+<Steps>
+  <Step title="Install xdg-desktop-portal-gtk">
+    This is the default fallback portal that implements most basic functionality.
+    
+    ```bash
+    # Fedora
+    sudo dnf install xdg-desktop-portal-gtk
+    
+    # Ubuntu/Debian
+    sudo apt install xdg-desktop-portal-gtk
+    
+    # Arch Linux
+    sudo pacman -S xdg-desktop-portal-gtk
+    ```
+  </Step>
+  
+  <Step title="Install xdg-desktop-portal-gnome">
+    Required for screencasting and screen recording support.
+    
+    ```bash
+    # Fedora
+    sudo dnf install xdg-desktop-portal-gnome
+    
+    # Ubuntu/Debian
+    sudo apt install xdg-desktop-portal-gnome
+    
+    # Arch Linux
+    sudo pacman -S xdg-desktop-portal-gnome
+    ```
+  </Step>
+  
+  <Step title="Install gnome-keyring">
+    Implements the Secret portal, required for password management in certain apps.
+    
+    ```bash
+    # Fedora
+    sudo dnf install gnome-keyring
+    
+    # Ubuntu/Debian
+    sudo apt install gnome-keyring
+    
+    # Arch Linux
+    sudo pacman -S gnome-keyring
+    ```
+  </Step>
+</Steps>
+
+### Portal Configuration
+
+The `niri-portals.conf` file configures which portal implementations to use. This file must be installed in the correct location (see [Getting Started - Manual Installation](/getting-started#manual-installation)).
+
+<Warning>
+  Starting from xdg-desktop-portal-gnome version 47.0, the portal uses Nautilus as the default file chooser. You must install `nautilus` for file picker dialogs to work.
+</Warning>
+
+If you prefer a different file manager:
+
+<Steps>
+  <Step title="Edit niri-portals.conf">
+    Open `/usr/local/share/xdg-desktop-portal/niri-portals.conf` (or the appropriate location for your installation).
+  </Step>
+  
+  <Step title="Change file chooser portal">
+    To use the GTK file chooser instead of Nautilus, set:
+    
+    ```ini
+    org.freedesktop.impl.portal.FileChooser=gtk;
+    ```
+  </Step>
+</Steps>
+
+### Portal Functionality
+
+Once portals are properly configured, systemd will start them on-demand automatically.
+
+<AccordionGroup>
+  <Accordion title="UI Settings">
+    Flatpak apps will read GNOME UI settings through the portals. For example, to enable dark mode:
+    
+    ```bash
+    dconf write /org/gnome/desktop/interface/color-scheme '"prefer-dark"'
+    ```
+  </Accordion>
+  
+  <Accordion title="Screen Sharing">
+    The GNOME portal provides screen sharing and recording functionality. This is essential for screen sharing in browsers and video conferencing apps.
+    
+    <Warning>
+      Do not set the `GDK_BACKEND` environment variable globally as this will break the screencast portal.
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+## Authentication Agent
+
+An authentication agent is required when applications need to request root permissions or elevated privileges.
+
+<Card title="plasma-polkit-agent" icon="shield" href="https://archlinux.org/packages/extra/x86_64/polkit-kde-agent/">
+  KDE's polkit authentication agent works well with niri
+</Card>
+
+### Setup
+
+Start the authentication agent using one of these methods:
+
+<Tabs>
+  <Tab title="systemd">
+    Start plasma-polkit-agent with systemd. See the [Example systemd Setup](/integration/example-systemd-setup) page for details.
+    
+    <Warning title="Fedora users">
+      On Fedora, you need to override the systemd service to add the correct dependency:
+      
+      ```bash
+      systemctl --user edit --full plasma-polkit-agent.service
+      ```
+      
+      Then add `After=graphical-session.target` to the service file.
+    </Warning>
+  </Tab>
+  <Tab title="spawn-at-startup">
+    Add to your `~/.config/niri/config.kdl`:
+    
+    ```kdl
+    spawn-at-startup "plasma-polkit-agent"
+    ```
+  </Tab>
+</Tabs>
+
+## Xwayland
+
+To run X11 applications like Steam, Discord, or older apps that don't support Wayland natively, you need Xwayland support.
+
+<Card title="xwayland-satellite" icon="satellite" href="https://github.com/Supreeeme/xwayland-satellite">
+  A standalone Xwayland server for Wayland compositors
+</Card>
+
+### Installation
+
+```bash
+# Arch Linux
+sudo pacman -S xwayland-satellite
+
+# Fedora
+sudo dnf copr enable yalter/xwayland-satellite
+sudo dnf install xwayland-satellite
+```
+
+For detailed setup instructions and configuration, see the [Xwayland documentation](/features/xwayland).
+
+## Essential Software Summary
+
+<CardGroup cols={2}>
+  <Card title="Notifications" icon="bell">
+    **mako** or similar notification daemon
+    
+    Required for app notifications
+  </Card>
+  
+  <Card title="Portals" icon="door-open">
+    **xdg-desktop-portal-gtk**
+    
+    **xdg-desktop-portal-gnome**
+    
+    **gnome-keyring**
+    
+    Required for Flatpak, file pickers, screen sharing
+  </Card>
+  
+  <Card title="Authentication" icon="shield">
+    **plasma-polkit-agent** or similar
+    
+    Required for privilege elevation
+  </Card>
+  
+  <Card title="File Manager" icon="folder">
+    **nautilus** or configure GTK portal
+    
+    Required for file picker dialogs
+  </Card>
+  
+  <Card title="Xwayland" icon="window">
+    **xwayland-satellite**
+    
+    Required for X11 apps
+  </Card>
+  
+  <Card title="Terminal" icon="terminal">
+    **alacritty** (default) or your preference
+    
+    Required for command-line access
+  </Card>
+  
+  <Card title="App Launcher" icon="rocket">
+    **fuzzel** (default) or rofi/wofi
+    
+    Required for launching applications
+  </Card>
+  
+  <Card title="Screen Locker" icon="lock">
+    **swaylock** or similar
+    
+    Recommended for security
+  </Card>
+</CardGroup>
+
+## Optional but Recommended
+
+While not strictly required, these tools enhance the desktop experience:
+
+- **Status bar**: waybar, yambar, or i3status-rust for system information
+- **Screen recorder**: wf-recorder or obs-studio for recording sessions  
+- **Screenshot tool**: grim + slurp (included in default niri config)
+- **Clipboard manager**: cliphist or wl-clipboard for clipboard history
+- **Volume control**: pavucontrol or similar for audio management
+- **Network manager**: nm-applet or similar for network configuration
+
+## Verification
+
+To verify your setup is working correctly:
+
+<Steps>
+  <Step title="Test notifications">
+    ```bash
+    notify-send "Test" "Notification test"
+    ```
+    
+    You should see a notification appear on screen.
+  </Step>
+  
+  <Step title="Test portals">
+    Open a Flatpak application and try using a file picker. It should open without errors.
+  </Step>
+  
+  <Step title="Test authentication">
+    Run a command that requires root privileges. You should see an authentication dialog.
+  </Step>
+</Steps>
+
+<Tip>
+  For a more integrated desktop experience, consider using a complete desktop shell like [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell), which includes many of these components pre-configured.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="sliders" href="/configuration">
+    Customize niri to match your workflow and preferences
+  </Card>
+  <Card title="Xwayland Setup" icon="window" href="/xwayland">
+    Detailed guide for setting up X11 application support
+  </Card>
+</CardGroup>

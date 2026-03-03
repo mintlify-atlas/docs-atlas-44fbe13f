@@ -1,0 +1,439 @@
+---
+title: Debug Options
+description: Debugging and experimental options for niri compositor
+---
+
+<Warning>
+These options are only useful for debugging or are experimental and have known issues. They are not meant for normal use.
+
+**These options are NOT covered by the config breaking change policy.** They can change or stop working at any point with little notice.
+</Warning>
+
+## Configuration Overview
+
+Here are all the debug options at a glance:
+
+```kdl
+debug {
+    preview-render "screencast"
+    // preview-render "screen-capture"
+    enable-overlay-planes
+    disable-cursor-plane
+    disable-direct-scanout
+    restrict-primary-scanout-to-matching-format
+    force-disable-connectors-on-resume
+    render-drm-device "/dev/dri/renderD129"
+    ignore-drm-device "/dev/dri/renderD128"
+    ignore-drm-device "/dev/dri/renderD130"
+    force-pipewire-invalid-modifier
+    dbus-interfaces-in-non-session-instances
+    wait-for-frame-completion-before-queueing
+    emulate-zero-presentation-time
+    disable-resize-throttling
+    disable-transactions
+    keep-laptop-panel-on-when-lid-is-closed
+    disable-monitor-names
+    strict-new-window-focus-policy
+    honor-xdg-activation-with-invalid-serial
+    skip-cursor-only-updates-during-vrr
+    deactivate-unfocused-windows
+}
+```
+
+## Rendering Options
+
+### preview-render
+
+<ParamField path="preview-render" type="string">
+  Make niri render the monitors the same way as for a screencast or a screen capture. Useful for previewing the `block-out-from` window rule.
+  
+  Options:
+  - `"screencast"`
+  - `"screen-capture"`
+</ParamField>
+
+```kdl
+debug {
+    preview-render "screencast"
+    // preview-render "screen-capture"
+}
+```
+
+### enable-overlay-planes
+
+<ParamField path="enable-overlay-planes" type="flag">
+  Enable direct scanout into overlay planes. May cause frame drops during some animations on some hardware (which is why it is not the default). Direct scanout into the primary plane is always enabled.
+</ParamField>
+
+```kdl
+debug {
+    enable-overlay-planes
+}
+```
+
+### disable-cursor-plane
+
+<ParamField path="disable-cursor-plane" type="flag">
+  Disable the use of the cursor plane. The cursor will be rendered together with the rest of the frame. Useful to work around driver bugs on specific hardware.
+</ParamField>
+
+```kdl
+debug {
+    disable-cursor-plane
+}
+```
+
+### disable-direct-scanout
+
+<ParamField path="disable-direct-scanout" type="flag">
+  Disable direct scanout to both the primary plane and the overlay planes.
+</ParamField>
+
+```kdl
+debug {
+    disable-direct-scanout
+}
+```
+
+### restrict-primary-scanout-to-matching-format
+
+<ParamField path="restrict-primary-scanout-to-matching-format" type="flag">
+  Restricts direct scanout to the primary plane to when the window buffer exactly matches the composition swapchain format. This flag may prevent unexpected bandwidth changes when going between composition and scanout.
+</ParamField>
+
+<Note>
+The plan is to make it default in the future, when we implement a way to tell the clients the composition swapchain format. As is, it may prevent some clients (mpv on some machines) from scanning out to the primary plane.
+</Note>
+
+```kdl
+debug {
+    restrict-primary-scanout-to-matching-format
+}
+```
+
+## Display Output Options
+
+### force-disable-connectors-on-resume
+
+<ParamField path="force-disable-connectors-on-resume" type="flag">
+  Force-disables all outputs upon resuming niri (TTY switch or waking up from suspend). This causes a modeset/screen blank on all outputs. If niri rendering is corrupted, or monitors don't light up after a TTY switch, you can try this flag.
+</ParamField>
+
+```kdl
+debug {
+    force-disable-connectors-on-resume
+}
+```
+
+### render-drm-device
+
+<ParamField path="render-drm-device" type="string">
+  Override the DRM device that niri will use for all rendering. You can set this to make niri use a different primary GPU than the default one.
+</ParamField>
+
+```kdl
+debug {
+    render-drm-device "/dev/dri/renderD129"
+}
+```
+
+### ignore-drm-device
+
+<Info>
+Available since version 25.11
+</Info>
+
+<ParamField path="ignore-drm-device" type="string">
+  List DRM devices that niri will ignore. Useful for GPU passthrough when you don't want niri to open a certain device. Can be specified multiple times.
+</ParamField>
+
+```kdl
+debug {
+    ignore-drm-device "/dev/dri/renderD128"
+    ignore-drm-device "/dev/dri/renderD130"
+}
+```
+
+### keep-max-bpc-unchanged
+
+<Info>
+Available since version 25.08
+</Info>
+
+<Warning>
+Since version 25.11, this setting is deprecated and does nothing: niri no longer sets max bpc. The old niri behavior with this setting enabled matches the new behavior.
+</Warning>
+
+```kdl
+debug {
+    keep-max-bpc-unchanged
+}
+```
+
+## Screen Capture Options
+
+### force-pipewire-invalid-modifier
+
+<Info>
+Available since version 25.01
+</Info>
+
+<ParamField path="force-pipewire-invalid-modifier" type="flag">
+  Forces PipeWire screencasting to use the invalid modifier, even when DRM offers more modifiers. Useful for testing the invalid modifier code path that is hit by drivers that don't support modifiers.
+</ParamField>
+
+```kdl
+debug {
+    force-pipewire-invalid-modifier
+}
+```
+
+## D-Bus and Session Options
+
+### dbus-interfaces-in-non-session-instances
+
+<ParamField path="dbus-interfaces-in-non-session-instances" type="flag">
+  Make niri create its D-Bus interfaces even if it's not running as a `--session`. Useful for testing screencasting changes without having to relogin.
+</ParamField>
+
+<Warning>
+The main niri instance will *not* currently take back the interfaces when you close the test instance, so you will need to relogin in the end to make screencasting work again.
+</Warning>
+
+```kdl
+debug {
+    dbus-interfaces-in-non-session-instances
+}
+```
+
+## Performance and Timing Options
+
+### wait-for-frame-completion-before-queueing
+
+<ParamField path="wait-for-frame-completion-before-queueing" type="flag">
+  Wait until every frame is done rendering before handing it over to DRM. Useful for diagnosing certain synchronization and performance problems.
+</ParamField>
+
+```kdl
+debug {
+    wait-for-frame-completion-before-queueing
+}
+```
+
+### emulate-zero-presentation-time
+
+<ParamField path="emulate-zero-presentation-time" type="flag">
+  Emulate zero (unknown) presentation time returned from DRM. This is a thing on NVIDIA proprietary drivers, so this flag can be used to test that niri doesn't break too hard on those systems.
+</ParamField>
+
+```kdl
+debug {
+    emulate-zero-presentation-time
+}
+```
+
+### skip-cursor-only-updates-during-vrr
+
+<Info>
+Available since version 25.08
+</Info>
+
+<ParamField path="skip-cursor-only-updates-during-vrr" type="flag">
+  Skips redrawing the screen from cursor input while variable refresh rate is active. Useful for games where the cursor isn't drawn internally to prevent erratic VRR shifts in response to cursor movement.
+</ParamField>
+
+<Note>
+The current implementation has some issues. For example, when there's nothing redrawing the screen (like a game), the rendering will appear to completely freeze (since cursor movements won't cause redraws).
+</Note>
+
+```kdl
+debug {
+    skip-cursor-only-updates-during-vrr
+}
+```
+
+## Window Management Options
+
+### disable-resize-throttling
+
+<Info>
+Available since version 0.1.9
+</Info>
+
+<ParamField path="disable-resize-throttling" type="flag">
+  Disable throttling resize events sent to windows. By default, when resizing quickly, a window will only receive the next size once it has made a commit for the previously requested size. This is required for resize transactions to work properly.
+</ParamField>
+
+<Warning>
+Disabling resize throttling will send resizes to windows as fast as possible, which is potentially very fast (for example, on a 1000 Hz mouse).
+</Warning>
+
+```kdl
+debug {
+    disable-resize-throttling
+}
+```
+
+### disable-transactions
+
+<Info>
+Available since version 0.1.9
+</Info>
+
+<ParamField path="disable-transactions" type="flag">
+  Disable transactions (resize and close). By default, windows which must resize together, do resize together. Transactions make niri wait until all windows finish resizing before showing them all on screen in one, synchronized frame.
+</ParamField>
+
+```kdl
+debug {
+    disable-transactions
+}
+```
+
+### strict-new-window-focus-policy
+
+<Info>
+Available since version 25.01
+</Info>
+
+<ParamField path="strict-new-window-focus-policy" type="flag">
+  Disables heuristic automatic focusing for new windows. Only windows that activate themselves with a valid xdg-activation token will be focused.
+</ParamField>
+
+```kdl
+debug {
+    strict-new-window-focus-policy
+}
+```
+
+### honor-xdg-activation-with-invalid-serial
+
+<Info>
+Available since version 25.05
+</Info>
+
+<ParamField path="honor-xdg-activation-with-invalid-serial" type="flag">
+  Makes niri honor xdg-activation tokens with invalid serials. By default, niri ignores such tokens to prevent windows from randomly stealing focus.
+</ParamField>
+
+<Note>
+Widely-used clients such as Discord and Telegram make fresh xdg-activation tokens upon clicking on their tray icon or on their notification. Most of the time, these fresh tokens will have invalid serials, because the app needs to be focused to get a valid serial.
+
+This debug flag makes niri honor such tokens, making these widely-used apps get focus when clicking on their tray icon or notification.
+</Note>
+
+```kdl
+debug {
+    honor-xdg-activation-with-invalid-serial
+}
+```
+
+### deactivate-unfocused-windows
+
+<Info>
+Available since version 25.08
+</Info>
+
+<ParamField path="deactivate-unfocused-windows" type="flag">
+  Makes niri drop the Activated state for all unfocused windows. Works around bugs in Chromium- and Electron-based apps that erroneously use the Activated xdg window state instead of keyboard focus.
+</ParamField>
+
+<Note>
+Some clients (notably, Chromium- and Electron-based, like Teams or Slack) erroneously use the Activated xdg window state instead of keyboard focus for things like deciding whether to send notifications for new messages, or for picking where to show an IME popup. Niri keeps the Activated state on unfocused workspaces and invisible tabbed windows (to reduce unwanted animations), surfacing bugs in these applications.
+</Note>
+
+```kdl
+debug {
+    deactivate-unfocused-windows
+}
+```
+
+## Monitor and Display Options
+
+### keep-laptop-panel-on-when-lid-is-closed
+
+<Info>
+Available since version 0.1.10
+</Info>
+
+<ParamField path="keep-laptop-panel-on-when-lid-is-closed" type="flag">
+  By default, niri will disable the internal laptop monitor when the laptop lid is closed. This flag turns off this behavior and will leave the internal laptop monitor on.
+</ParamField>
+
+```kdl
+debug {
+    keep-laptop-panel-on-when-lid-is-closed
+}
+```
+
+### disable-monitor-names
+
+<Info>
+Available since version 0.1.10
+</Info>
+
+<ParamField path="disable-monitor-names" type="flag">
+  Disables the make/model/serial monitor names, as if niri fails to read them from the EDID. Use this flag to work around a crash present in 0.1.9 and 0.1.10 when connecting two monitors with matching make/model/serial.
+</ParamField>
+
+```kdl
+debug {
+    disable-monitor-names
+}
+```
+
+## Debug Key Bindings
+
+These are not debug options, but rather key bindings for debugging:
+
+```kdl
+binds {
+    Mod+Shift+Ctrl+T { toggle-debug-tint; }
+    Mod+Shift+Ctrl+O { debug-toggle-opaque-regions; }
+    Mod+Shift+Ctrl+D { debug-toggle-damage; }
+}
+```
+
+### toggle-debug-tint
+
+<ParamField path="toggle-debug-tint" type="action">
+  Tints all surfaces green, unless they are being directly scanned out. Useful to check if direct scanout is working.
+</ParamField>
+
+```kdl
+binds {
+    Mod+Shift+Ctrl+T { toggle-debug-tint; }
+}
+```
+
+### debug-toggle-opaque-regions
+
+<Info>
+Available since version 0.1.6
+</Info>
+
+<ParamField path="debug-toggle-opaque-regions" type="action">
+  Tints regions marked as opaque with blue and the rest of the render elements with red. Useful to check how Wayland surfaces and internal render elements mark their parts as opaque, which is a rendering performance optimization.
+</ParamField>
+
+```kdl
+binds {
+    Mod+Shift+Ctrl+O { debug-toggle-opaque-regions; }
+}
+```
+
+### debug-toggle-damage
+
+<Info>
+Available since version 0.1.6
+</Info>
+
+<ParamField path="debug-toggle-damage" type="action">
+  Tints damaged regions with red.
+</ParamField>
+
+```kdl
+binds {
+    Mod+Shift+Ctrl+D { debug-toggle-damage; }
+}
+```

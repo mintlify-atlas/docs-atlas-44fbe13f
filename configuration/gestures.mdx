@@ -1,0 +1,171 @@
+---
+title: Gestures
+description: Configure gesture settings in niri compositor
+---
+
+<Info>
+Available since version 25.02
+</Info>
+
+The `gestures` config section contains gesture settings. For an overview of all niri gestures, see the [Gestures](/features/gestures) page.
+
+## Configuration Overview
+
+Here's a quick glance at the available settings along with their default values:
+
+```kdl
+gestures {
+    dnd-edge-view-scroll {
+        trigger-width 30
+        delay-ms 100
+        max-speed 1500
+    }
+
+    dnd-edge-workspace-switch {
+        trigger-height 50
+        delay-ms 100
+        max-speed 1500
+    }
+
+    hot-corners {
+        // off
+        top-left
+        // top-right
+        // bottom-left
+        // bottom-right
+    }
+}
+```
+
+## dnd-edge-view-scroll
+
+<ParamField path="dnd-edge-view-scroll" type="object">
+  Scroll the tiling view when moving the mouse cursor against a monitor edge during drag-and-drop (DnD). Also works on a touchscreen.
+</ParamField>
+
+This will work for regular drag-and-drop (e.g. dragging a file from a file manager), and for window interactive move when targeting the tiling layout.
+
+### Options
+
+<ParamField path="trigger-width" type="number" default="30">
+  Size of the area near the monitor edge that will trigger the scrolling, in logical pixels.
+</ParamField>
+
+<ParamField path="delay-ms" type="number" default="100">
+  Delay in milliseconds before the scrolling starts. Avoids unwanted scrolling when dragging things across monitors.
+</ParamField>
+
+<ParamField path="max-speed" type="number" default="1500">
+  Maximum scrolling speed in logical pixels per second. The scrolling speed increases linearly as you move your mouse cursor from trigger-width to the very edge of the monitor.
+</ParamField>
+
+### Example
+
+```kdl
+gestures {
+    // Increase the trigger area and maximum speed.
+    dnd-edge-view-scroll {
+        trigger-width 100
+        max-speed 3000
+    }
+}
+```
+
+## dnd-edge-workspace-switch
+
+<Info>
+Available since version 25.05
+</Info>
+
+<ParamField path="dnd-edge-workspace-switch" type="object">
+  Scroll the workspaces up/down when moving the mouse cursor against a monitor edge during drag-and-drop (DnD) while in the overview. Also works on a touchscreen.
+</ParamField>
+
+### Options
+
+<ParamField path="trigger-height" type="number" default="50">
+  Size of the area near the monitor edge that will trigger the scrolling, in logical pixels.
+</ParamField>
+
+<ParamField path="delay-ms" type="number" default="100">
+  Delay in milliseconds before the scrolling starts. Avoids unwanted scrolling when dragging things across monitors.
+</ParamField>
+
+<ParamField path="max-speed" type="number" default="1500">
+  Maximum scrolling speed; 1500 corresponds to one screen height per second. The scrolling speed increases linearly as you move your mouse cursor from trigger-width to the very edge of the monitor.
+</ParamField>
+
+### Example
+
+```kdl
+gestures {
+    // Increase the trigger area and maximum speed.
+    dnd-edge-workspace-switch {
+        trigger-height 100
+        max-speed 3000
+    }
+}
+```
+
+## hot-corners
+
+<Info>
+Available since version 25.05
+</Info>
+
+<ParamField path="hot-corners" type="object">
+  Configure hot corners to toggle the overview. By default, the top-left corner is active.
+</ParamField>
+
+Put your mouse at a configured hot corner of a monitor to toggle the overview. Also works during drag-and-dropping something.
+
+### Disable Hot Corners
+
+Set `off` to disable the hot corners:
+
+```kdl
+// Disable the hot corners.
+gestures {
+    hot-corners {
+        off
+    }
+}
+```
+
+### Choose Specific Corners
+
+<Info>
+Available since version 25.11
+</Info>
+
+You can choose specific hot corners by name: `top-left`, `top-right`, `bottom-left`, `bottom-right`. If no corners are explicitly set, the top-left corner will be active by default.
+
+<ParamField path="top-left" type="flag">
+  Enable the top-left hot corner.
+</ParamField>
+
+<ParamField path="top-right" type="flag">
+  Enable the top-right hot corner.
+</ParamField>
+
+<ParamField path="bottom-left" type="flag">
+  Enable the bottom-left hot corner.
+</ParamField>
+
+<ParamField path="bottom-right" type="flag">
+  Enable the bottom-right hot corner.
+</ParamField>
+
+```kdl
+// Enable the top-right and bottom-right hot corners.
+gestures {
+    hot-corners {
+        top-right
+        bottom-right
+    }
+}
+```
+
+### Per-Output Configuration
+
+You can also customize hot corners per-output [in the output config](/configuration/outputs#hot-corners).

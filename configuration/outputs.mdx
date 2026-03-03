@@ -1,0 +1,331 @@
+---
+title: Output Configuration
+description: Configure monitors, resolution, refresh rate, and positioning in niri
+---
+
+## Overview
+
+By default, niri will attempt to turn on all connected monitors using their preferred modes. You can disable or adjust this with `output` sections.
+
+```kdl
+output "eDP-1" {
+    mode "1920x1080@120.030"
+    scale 2.0
+    transform "90"
+    position x=1280 y=0
+    variable-refresh-rate
+}
+
+output "HDMI-A-1" {
+    mode "2560x1440@143.912"
+}
+```
+
+<Info>
+  Outputs are matched by connector name (i.e. `eDP-1`, `HDMI-A-1`), or by monitor manufacturer, model, and serial, separated by a single space each.
+</Info>
+
+### Finding Output Names
+
+You can find all output information by running:
+
+```bash
+niri msg outputs
+```
+
+<Note>
+  Usually, the built-in monitor in laptops will be called `eDP-1`.
+</Note>
+
+<Badge text="Since: 0.1.6" /> The output name is case-insensitive.
+
+<Badge text="Since: 0.1.9" /> Outputs can be matched by manufacturer, model, and serial. Before, they could be matched only by the connector name.
+
+## Basic Settings
+
+### Disable Output
+
+This flag turns off that output entirely.
+
+```kdl
+// Turn off that monitor.
+output "HDMI-A-1" {
+    off
+}
+```
+
+### Mode
+
+Set the monitor resolution and refresh rate.
+
+<ParamField path="mode" type="string">
+  Format: `<width>x<height>` or `<width>x<height>@<refresh rate>`
+  
+  If the refresh rate is omitted, niri will pick the highest refresh rate for the resolution.
+</ParamField>
+
+```kdl
+// Set a high refresh rate for this monitor.
+output "HDMI-A-1" {
+    mode "2560x1440@143.912"
+}
+
+// Use a lower resolution on the built-in laptop monitor
+output "eDP-1" {
+    mode "1280x720"
+}
+```
+
+<Warning>
+  The refresh rate that you set here must match **exactly**, down to the three decimal digits, to what you see in `niri msg outputs`.
+</Warning>
+
+<Accordion title="Custom Modes (Since: 25.11)">
+  You can configure a custom mode (not offered by the monitor) by setting `custom=true`. In this case, the refresh rate is mandatory.
+
+  ```kdl
+  output "HDMI-A-1" {
+      mode custom=true "2560x1440@143.912"
+  }
+  ```
+
+  <Warning>
+    Custom modes are not guaranteed to work and may **damage your monitor**, especially if it's a CRT. Use at your own risk. Follow the maximum supported limits in your monitor's instructions.
+  </Warning>
+</Accordion>
+
+### Modeline
+
+<Badge text="Since: 25.11" />
+
+Directly configures the monitor's mode via a modeline, overriding any configured `mode`. The modeline can be calculated via utilities such as [cvt](https://man.archlinux.org/man/cvt.1.en) or [gtf](https://man.archlinux.org/man/gtf.1.en).
+
+```kdl
+output "eDP-3" {
+    modeline 173.00  1920 2048 2248 2576  1080 1083 1088 1120 "-hsync" "+vsync"
+}
+```
+
+<Warning>
+  Out of spec modelines may **damage your monitor**, especially if it's a CRT. Follow the maximum supported limits in your monitor's instructions.
+</Warning>
+
+### Scale
+
+Set the scale of the monitor.
+
+<ParamField path="scale" type="number" default="auto">
+  Scale factor for the output. Can be integer or fractional (e.g., 1.5 for 150% scale).
+  
+  <Badge text="Since: 0.1.6" /> If unset, niri will guess an appropriate scale based on the physical dimensions and resolution.
+</ParamField>
+
+```kdl
+output "eDP-1" {
+    scale 2.0
+}
+```
+
+<Info>
+  - <Badge text="Since: 0.1.7" /> You can use fractional scale values, for example `scale 1.5`
+  - <Badge text="Since: 0.1.7" /> Dot is no longer needed for integer scale: `scale 2` instead of `scale 2.0`
+  - <Badge text="Since: 0.1.7" /> Scale below 0 and above 10 will fail during config parsing
+</Info>
+
+### Transform
+
+Rotate the output counter-clockwise.
+
+<ParamField path="transform" type="string" default="normal">
+  Valid values: `normal`, `90`, `180`, `270`, `flipped`, `flipped-90`, `flipped-180`, `flipped-270`
+  
+  Values with `flipped` additionally flip the output.
+</ParamField>
+
+```kdl
+output "HDMI-A-1" {
+    transform "90"
+}
+```
+
+### Position
+
+Set the position of the output in the global coordinate space.
+
+```kdl
+output "HDMI-A-1" {
+    position x=1920 y=0
+}
+```
+
+<Note>
+  Output scale and rotation has to be taken into account for positioning: outputs are sized in **logical, or scaled, pixels**.
+  
+  For example, a 3840×2160 output with scale 2.0 will have a logical size of 1920×1080, so to put another output directly adjacent to it on the right, set its x to 1920.
+</Note>
+
+This affects:
+- Directional monitor actions like `focus-monitor-left`
+- Cursor movement (cursor can only move between directly adjacent outputs)
+
+#### Automatic Positioning
+
+If the position is unset or results in an overlap, the output is placed automatically using this algorithm:
+
+1. Collect all connected monitors and their logical sizes
+2. Sort them by their name (makes positioning deterministic)
+3. Try to place every output with explicitly configured `position`, in order
+4. Place every output without explicitly configured `position` by putting it to the right of all previously placed outputs
+
+## Advanced Settings
+
+### Variable Refresh Rate
+
+<Badge text="Since: 0.1.5" />
+
+This flag enables variable refresh rate (VRR, also known as adaptive sync, FreeSync, or G-Sync), if the output supports it.
+
+```kdl
+output "HDMI-A-1" {
+    variable-refresh-rate
+}
+```
+
+You can check whether an output supports VRR in `niri msg outputs`.
+
+<Warning>
+  Some drivers have various issues with VRR:
+  - If the cursor moves at a low framerate with VRR, try setting the `disable-cursor-plane` debug flag
+  - If a monitor is not detected as VRR-capable when it should, sometimes unplugging a different monitor fixes it
+  - Some monitors will continuously modeset (flash black) with VRR enabled
+</Warning>
+
+<Accordion title="On-Demand VRR (Since: 0.1.9)">
+  You can set the `on-demand=true` property, which will only enable VRR when this output shows a window matching the `variable-refresh-rate` window rule.
+
+  ```kdl
+  output "HDMI-A-1" {
+      variable-refresh-rate on-demand=true
+  }
+  ```
+
+  This is helpful to avoid various issues with VRR, since it can be disabled most of the time, and only enabled for specific windows, like games or video players.
+</Accordion>
+
+### Focus at Startup
+
+<Badge text="Since: 25.05" />
+
+Focus this output by default when niri starts.
+
+```kdl
+// Focus HDMI-A-1 by default.
+output "HDMI-A-1" {
+    focus-at-startup
+}
+
+// ...if HDMI-A-1 wasn't connected, focus DP-2 instead.
+output "DP-2" {
+    focus-at-startup
+}
+```
+
+<Info>
+  If multiple outputs with `focus-at-startup` are connected, they are prioritized in the order that they appear in the config.
+  
+  When none of the connected outputs are explicitly `focus-at-startup`, niri will focus the first one sorted by name.
+</Info>
+
+### Backdrop Color
+
+<Badge text="Since: 25.05" />
+
+Set the backdrop color that niri draws for this output. This is visible between workspaces or in the overview.
+
+```kdl
+output "HDMI-A-1" {
+    backdrop-color "#001100"
+}
+```
+
+<Info>
+  The alpha channel for this color will be ignored.
+</Info>
+
+### Hot Corners
+
+<Badge text="Since: 25.11" />
+
+Customize the hot corners for this output. By default, hot corners in the gestures settings are used for all outputs.
+
+```kdl
+// Enable the bottom-left and bottom-right hot corners on HDMI-A-1.
+output "HDMI-A-1" {
+    hot-corners {
+        bottom-left
+        bottom-right
+    }
+}
+
+// Disable the hot corners on DP-2.
+output "DP-2" {
+    hot-corners {
+        off
+    }
+}
+```
+
+<Info>
+  Hot corners toggle the overview when you put your mouse at the very corner of a monitor.
+</Info>
+
+## Layout Config Overrides
+
+<Badge text="Since: 25.11" />
+
+You can customize layout settings for an output with a `layout {}` block:
+
+```kdl
+output "SomeCompany VerticalMonitor 1234" {
+    transform "90"
+
+    layout {
+        default-column-width { proportion 1.0; }
+        // ...any other layout setting
+    }
+}
+
+output "SomeCompany UltrawideMonitor 1234" {
+    layout {
+        default-column-width { proportion 0.25; }
+
+        preset-column-widths {
+            proportion 0.2
+            proportion 0.25
+            proportion 0.5
+            proportion 0.75
+            proportion 0.8
+        }
+    }
+}
+```
+
+It accepts all the same options as the top-level `layout {}` block.
+
+<Accordion title="Unsetting Flags">
+  In order to unset a flag, write it with `false`:
+
+  ```kdl
+  layout {
+      // Enabled globally.
+      always-center-single-column
+  }
+
+  output "eDP-1" {
+      layout {
+          // Unset on this output.
+          always-center-single-column false
+      }
+  }
+  ```
+</Accordion>

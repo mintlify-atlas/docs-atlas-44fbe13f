@@ -1,0 +1,79 @@
+---
+title: NVIDIA GPU Issues
+description: Troubleshooting guide for running niri with NVIDIA graphics cards
+---
+
+This guide covers common issues and solutions when running niri with NVIDIA GPUs.
+
+## High VRAM Usage Fix
+
+<Warning>
+If you see close to 1 GiB of VRAM usage in [nvtop](https://github.com/Syllo/nvtop) instead of the expected ~100 MiB, you're likely hitting the NVIDIA driver memory leak issue.
+</Warning>
+
+Presently, there is a quirk in the NVIDIA drivers that affects niri's VRAM usage. The driver does not properly release VRAM back into the pool, causing the heap to not return freed buffers to the driver.
+
+### Solution
+
+You can mitigate this by configuring the NVIDIA drivers with a per-process application profile:
+
+1. Create the configuration directory:
+
+```bash
+sudo mkdir -p /etc/nvidia/nvidia-application-profiles-rc.d
+```
+
+2. Create the configuration file `/etc/nvidia/nvidia-application-profiles-rc.d/50-limit-free-buffer-pool-in-wayland-compositors.json` with the following content:
+
+```json
+{
+    "rules": [
+        {
+            "pattern": {
+                "feature": "procname",
+                "matches": "niri"
+            },
+            "profile": "Limit Free Buffer Pool On Wayland Compositors"
+        }
+    ],
+    "profiles": [
+        {
+            "name": "Limit Free Buffer Pool On Wayland Compositors",
+            "settings": [
+                {
+                    "key": "GLVidHeapReuseRatio",
+                    "value": 0
+                }
+            ]
+        }
+    ]
+}
+```
+
+<Note>
+The filename in `/etc/nvidia/nvidia-application-profiles-rc.d/` can be anything and doesn't require a specific extension.
+</Note>
+
+3. Restart niri to apply the changes.
+
+### Background
+
+This solution comes from the [upstream NVIDIA issue](https://github.com/NVIDIA/egl-wayland/issues/126#issuecomment-2379945259). There's a slim chance that NVIDIA may update their built-in application profiles to apply this automatically to niri in the future.
+
+The fix shipped in the driver at the time of writing uses a value of 0, while the initial config posted by an NVIDIA engineer approximately a year prior used a value of 1.
+
+## Screencast Flickering Fix
+
+<Warning>
+This section applies to niri versions up to 25.08. The problem has been properly fixed in later versions.
+</Warning>
+
+If you experienced screencast glitches or flickering on NVIDIA in older versions of niri (up to 25.08), you could set this debug flag in the niri config:
+
+```kdl
+debug {
+    wait-for-frame-completion-in-pipewire
+}
+```
+
+This debug flag has since been removed because the underlying problem was properly fixed in niri.

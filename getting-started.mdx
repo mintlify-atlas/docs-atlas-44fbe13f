@@ -1,0 +1,273 @@
+---
+title: Getting Started
+description: Install and configure niri on your system
+---
+
+This guide will help you install niri and get it running on your system. Choose between a quick start with DankMaterialShell for an out-of-the-box experience, or a manual installation for more control.
+
+## Quick Start with DankMaterialShell
+
+For the easiest setup experience, install niri with [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell), which provides a complete desktop environment including panels, notifications, and system controls.
+
+<Tabs>
+  <Tab title="Fedora">
+    ```bash
+    sudo dnf copr enable avengemedia/dms
+    sudo dnf install niri dms
+    systemctl --user add-wants niri.service dms
+    ```
+  </Tab>
+  <Tab title="Arch Linux">
+    ```bash
+    sudo pacman -Syu niri xwayland-satellite xdg-desktop-portal-gnome xdg-desktop-portal-gtk alacritty
+    paru -S dms-shell-bin matugen cava qt6-multimedia-ffmpeg
+    systemctl --user add-wants niri.service dms
+    ```
+    
+    <Note>
+      This example uses [paru](https://github.com/morganamilo/paru) as the AUR helper.
+    </Note>
+  </Tab>
+  <Tab title="Ubuntu 25.10+">
+    ```bash
+    sudo add-apt-repository ppa:avengemedia/danklinux
+    sudo add-apt-repository ppa:avengemedia/dms
+    sudo apt install niri dms
+    ```
+  </Tab>
+</Tabs>
+
+<Steps>
+  <Step title="Install packages">
+    Run the commands above for your distribution to install niri and DankMaterialShell.
+  </Step>
+  
+  <Step title="Log out and select Niri">
+    Log out of your current session, select "Niri" in your display manager, and log back in.
+    
+    If not using a display manager, run `niri-session` on a TTY.
+  </Step>
+  
+  <Step title="Fix dual bar issue (if applicable)">
+    The default niri config runs Waybar, which may conflict with DMS. If you see two bars:
+    
+    ```bash
+    pkill waybar
+    ```
+    
+    Then open `~/.config/niri/config.kdl` and remove the `spawn-at-startup "waybar"` line.
+  </Step>
+</Steps>
+
+<Tip>
+  Check the DankMaterialShell's [compositor setup page](https://danklinux.com/docs/dankmaterialshell/compositors#niri-configuration) to learn how to configure DMS-specific binds and niri integrations.
+</Tip>
+
+## Manual Installation
+
+For more control over your setup, you can install niri from distribution packages or build it yourself.
+
+### Distribution Packages
+
+niri is available in several package repositories:
+
+- **Fedora**: [COPR repository](https://copr.fedorainfracloud.org/coprs/yalter/niri/) and [nightly COPR](https://copr.fedorainfracloud.org/coprs/yalter/niri-git/)
+- **NixOS**: [niri-flake](https://github.com/sodiboo/niri-flake)
+- **Debian-based**: [pacstall package](https://pacstall.dev/packages/niri/)
+- **Other distributions**: Check [Repology](https://repology.org/project/niri/versions) for more options
+
+<Note>
+  After installing from your distribution, continue to the [First Launch](#first-launch) section.
+</Note>
+
+### Building from Source
+
+To build niri yourself, you'll need Rust and various system dependencies.
+
+<Steps>
+  <Step title="Install dependencies">
+    <Tabs>
+      <Tab title="Ubuntu 24.04">
+        ```bash
+        sudo apt-get install -y gcc clang libudev-dev libgbm-dev libxkbcommon-dev \
+          libegl1-mesa-dev libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev \
+          libseat-dev libpipewire-0.3-dev libpango1.0-dev libdisplay-info-dev
+        ```
+      </Tab>
+      <Tab title="Fedora">
+        ```bash
+        sudo dnf install gcc libudev-devel libgbm-devel libxkbcommon-devel \
+          wayland-devel libinput-devel dbus-devel systemd-devel libseat-devel \
+          pipewire-devel pango-devel cairo-gobject-devel clang libdisplay-info-devel
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Install Rust">
+    Install the latest stable Rust from [rustup.rs](https://rustup.rs/):
+    
+    ```bash
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    ```
+  </Step>
+  
+  <Step title="Build niri">
+    ```bash
+    cargo build --release
+    ```
+    
+    <Warning>
+      Do NOT build with `--all-features`! Some features are meant only for development and may cause issues like unbounded memory growth.
+    </Warning>
+    
+    For alternative init systems, use:
+    
+    ```bash
+    cargo build --release --no-default-features --features dinit,dbus,xdp-gnome-screencast
+    ```
+  </Step>
+  
+  <Step title="Install files manually">
+    Copy the built files to their destinations:
+    
+    | File | Destination |
+    |------|-------------|
+    | `target/release/niri` | `/usr/local/bin/` |
+    | `resources/niri-session` | `/usr/local/bin/` |
+    | `resources/niri.desktop` | `/usr/local/share/wayland-sessions/` |
+    | `resources/niri-portals.conf` | `/usr/local/share/xdg-desktop-portal/` |
+    | `resources/niri.service` | `/etc/systemd/user/` |
+    | `resources/niri-shutdown.target` | `/etc/systemd/user/` |
+    
+    <Note>
+      Make sure the path to `niri` in `niri.service` matches your installation location (defaults to `/usr/bin/niri`).
+    </Note>
+  </Step>
+</Steps>
+
+## First Launch
+
+<Steps>
+  <Step title="Start niri">
+    **From a display manager**: Log out and select "Niri" from your display manager (like GDM).
+    
+    **From a TTY**: Run `niri-session` (for systemd/dinit) or `niri --session` (for other init systems).
+    
+    **Windowed mode**: Run `niri` inside an existing desktop session for testing (note: this is mainly for development and may have hotkey issues).
+  </Step>
+  
+  <Step title="Test basic functionality">
+    Try these default hotkeys:
+    
+    - <kbd>Super</kbd> + <kbd>T</kbd>: Open terminal (Alacritty)
+    - <kbd>Super</kbd> + <kbd>D</kbd>: Open application launcher (fuzzel)
+    - <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd>: Exit niri
+    
+    <Note>
+      When running in windowed mode, the Mod key is <kbd>Alt</kbd> instead of <kbd>Super</kbd>.
+    </Note>
+  </Step>
+  
+  <Step title="Install essential software">
+    niri requires additional software for full desktop functionality. See the [Essential Software](/important-software) page for required components like notification daemons and portals.
+  </Step>
+  
+  <Step title="Configure niri">
+    Check the [Configuration](/configuration/introduction) documentation to customize niri to your preferences. The config file is located at `~/.config/niri/config.kdl`.
+  </Step>
+</Steps>
+
+## Platform-Specific Notes
+
+<AccordionGroup>
+  <Accordion title="NVIDIA GPUs">
+    NVIDIA drivers have a known issue with high VRAM usage. Apply the manual fix documented in the [NVIDIA guide](/troubleshooting/nvidia).
+    
+    If you experience a black screen:
+    
+    1. Update NVIDIA drivers to a version that supports GBM
+    2. Enable kernel modesetting by adding `nvidia-drm.modeset=1` to your kernel command line
+    
+    Follow distribution-specific guides for Wayland compositor setup.
+  </Accordion>
+  
+  <Accordion title="Asahi, ARM, and kmsro devices">
+    If you get a black screen on TTY startup, niri may have detected the wrong render device.
+    
+    First, list available devices:
+    
+    ```bash
+    ls -l /dev/dri/
+    ```
+    
+    Then add the render device to your config at `~/.config/niri/config.kdl`:
+    
+    ```kdl
+    debug {
+        render-drm-device "/dev/dri/renderD128"
+    }
+    ```
+    
+    Try different `renderD*` or `card*` devices if the issue persists.
+  </Accordion>
+  
+  <Accordion title="NixOS">
+    Ensure your system mesa version matches the niri mesa version to avoid black screen issues.
+    
+    On Intel graphics, you may need the workaround described in the [NixOS wiki](https://wiki.nixos.org/wiki/Intel_Graphics).
+    
+    Use the community-maintained flake:
+    
+    ```bash
+    nix build
+    ./results/bin/niri
+    ```
+    
+    On non-NixOS systems, use [NixGL](https://github.com/nix-community/nixGL):
+    
+    ```bash
+    nix run --impure github:guibou/nixGL -- ./results/bin/niri
+    ```
+  </Accordion>
+  
+  <Accordion title="Virtual Machines">
+    Make sure to enable 3D acceleration in your VM settings for niri to work properly.
+  </Accordion>
+</AccordionGroup>
+
+## Desktop Environments
+
+Several desktop environments officially support or work well with niri:
+
+<CardGroup cols={2}>
+  <Card title="LXQt" icon="desktop" href="https://github.com/lxqt/lxqt/wiki/ConfigWaylandSettings#general">
+    Official niri support with complete desktop integration
+  </Card>
+  <Card title="XFCE" icon="desktop" href="https://wiki.xfce.org/releng/wayland_roadmap#component_specific_status">
+    Many components work on Wayland, including with niri
+  </Card>
+  <Card title="Quickshell" icon="terminal">
+    Complete desktop shells like DankMaterialShell and Noctalia
+  </Card>
+  <Card title="COSMIC" icon="rocket" href="https://github.com/Drakulix/cosmic-ext-extra-sessions">
+    Run COSMIC session with niri using cosmic-ext-extra-sessions
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Essential Software" icon="puzzle-piece" href="/important-software">
+    Set up notification daemons, portals, and authentication agents
+  </Card>
+  <Card title="Default Hotkeys" icon="keyboard" href="/hotkeys">
+    Learn the default keyboard shortcuts for window management
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration">
+    Customize niri to match your workflow
+  </Card>
+  <Card title="Xwayland" icon="window" href="/xwayland">
+    Set up X11 application support
+  </Card>
+</CardGroup>

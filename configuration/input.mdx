@@ -1,0 +1,363 @@
+---
+title: Input Configuration
+description: Configure keyboards, mice, touchpads, and other input devices in niri
+---
+
+## Overview
+
+In this section you can configure input devices like keyboard and mouse, and some input-related options.
+
+There's a section for each device type: `keyboard`, `touchpad`, `mouse`, `trackpoint`, `trackball`, `tablet`, `touch`. Settings in those sections will apply to every device of that type.
+
+<Note>
+  Currently, there's no way to configure specific devices individually (but that is planned).
+</Note>
+
+## Keyboard
+
+### Layout
+
+In the `xkb` section, you can set layout, variant, options, model and rules. These are passed directly to libxkbcommon, which is also used by most other Wayland compositors.
+
+```kdl
+input {
+    keyboard {
+        xkb {
+            layout "us"
+            variant "colemak_dh_ortho"
+            options "compose:ralt,ctrl:nocaps"
+        }
+    }
+}
+```
+
+<Info>
+  See the `xkeyboard-config(7)` manual for more information on XKB options.
+</Info>
+
+<Accordion title="Using a custom .xkb file (Since: 25.02)">
+  Alternatively, you can directly set a path to a .xkb file containing an xkb keymap. This overrides all other xkb settings.
+
+  ```kdl
+  input {
+      keyboard {
+          xkb {
+              file "~/.config/keymap.xkb"
+          }
+      }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Systemd-localed integration (Since: 25.08)">
+  If the `xkb` section is empty (like it is by default), niri will fetch xkb settings from systemd-localed at `org.freedesktop.locale1` over D-Bus.
+
+  You can see this layout in `localectl` and change it with `localectl set-x11-keymap`:
+
+  ```bash
+  localectl set-x11-keymap "us" "" "colemak_dh_ortho" "compose:ralt,ctrl:nocaps"
+  localectl
+  ```
+
+  These settings are picked up by some other programs too, like GDM.
+</Accordion>
+
+### Layout Tracking
+
+When using multiple layouts, niri can remember the current layout globally (the default) or per-window.
+
+<ParamField path="track-layout" type="string" default="global">
+  Controls how keyboard layouts are tracked:
+  - `global`: layout change is global for all windows
+  - `window`: layout is tracked for each window individually
+</ParamField>
+
+```kdl
+input {
+    keyboard {
+        track-layout "window"
+    }
+}
+```
+
+### Repeat Settings
+
+<ParamField path="repeat-delay" type="number" default="600">
+  Delay in milliseconds before the keyboard repeat starts
+</ParamField>
+
+<ParamField path="repeat-rate" type="number" default="25">
+  Rate in characters per second
+</ParamField>
+
+```kdl
+input {
+    keyboard {
+        repeat-delay 600
+        repeat-rate 25
+    }
+}
+```
+
+### Num Lock
+
+<Badge text="Since: 25.05" />
+
+Set the `numlock` flag to turn on Num Lock automatically at startup.
+
+```kdl
+input {
+    keyboard {
+        numlock
+    }
+}
+```
+
+<Warning>
+  You might want to disable (comment out) `numlock` if you're using a laptop with a keyboard that overlays Num Lock keys on top of regular keys.
+</Warning>
+
+## Pointing Devices
+
+Most settings for the pointing devices are passed directly to libinput. Other Wayland compositors also use libinput, so it's likely you will find the same settings there.
+
+<Note>
+  For flags like `tap`, omit them or comment them out to disable the setting.
+</Note>
+
+### Common Settings
+
+A few settings are common between `touchpad`, `mouse`, `trackpoint`, and `trackball`:
+
+<ParamField path="natural-scroll" type="flag">
+  If set, inverts the scrolling direction
+</ParamField>
+
+<ParamField path="accel-speed" type="number" default="0.0">
+  Pointer acceleration speed. Valid values are from `-1.0` to `1.0`
+</ParamField>
+
+<ParamField path="accel-profile" type="string" default="adaptive">
+  Can be `adaptive` (the default) or `flat` (disables pointer acceleration)
+</ParamField>
+
+<ParamField path="scroll-method" type="string">
+  When to generate scroll events instead of pointer motion events. Can be:
+  - `no-scroll`
+  - `two-finger`
+  - `edge`
+  - `on-button-down`
+  
+  The default and supported methods vary depending on the device type.
+</ParamField>
+
+<ParamField path="left-handed" type="flag">
+  If set, changes the device to left-handed mode
+</ParamField>
+
+<ParamField path="middle-emulation" type="flag">
+  Emulate a middle mouse click by pressing left and right mouse buttons at once
+</ParamField>
+
+### Touchpad Settings
+
+```kdl
+input {
+    touchpad {
+        tap
+        natural-scroll
+        dwt
+        accel-speed 0.2
+    }
+}
+```
+
+<ParamField path="tap" type="flag">
+  Enable tap-to-click
+</ParamField>
+
+<ParamField path="dwt" type="flag">
+  Disable-when-typing
+</ParamField>
+
+<ParamField path="dwtp" type="flag">
+  Disable-when-trackpointing
+</ParamField>
+
+<ParamField path="drag" type="boolean">
+  <Badge text="Since: 25.05" /> Controls if tap-and-drag is enabled
+</ParamField>
+
+<ParamField path="drag-lock" type="flag">
+  <Badge text="Since: 25.02" /> If set, lifting the finger off for a short time while dragging will not drop the dragged item.
+</ParamField>
+
+<ParamField path="tap-button-map" type="string">
+  Can be `left-right-middle` or `left-middle-right`. Controls which button corresponds to a two-finger tap and a three-finger tap.
+</ParamField>
+
+<ParamField path="click-method" type="string">
+  Can be `button-areas` or `clickfinger`. Changes the click method.
+</ParamField>
+
+<ParamField path="disabled-on-external-mouse" type="flag">
+  Do not send events while external pointer device is plugged in
+</ParamField>
+
+<ParamField path="scroll-factor" type="number">
+  <Badge text="Since: 0.1.10" /> Scales the scrolling speed by this value
+  
+  <Badge text="Since: 25.08" /> You can also override horizontal and vertical scroll factor separately:
+  ```kdl
+  scroll-factor horizontal=2.0 vertical=-1.0
+  ```
+</ParamField>
+
+### Mouse Settings
+
+```kdl
+input {
+    mouse {
+        accel-speed 0.2
+        accel-profile "flat"
+    }
+}
+```
+
+Mouse supports the same common settings as touchpad, plus `scroll-factor`.
+
+### Tablet and Touch Settings
+
+Tablets and touchscreens are absolute pointing devices that can be mapped to a specific output:
+
+```kdl
+input {
+    tablet {
+        map-to-output "eDP-1"
+    }
+
+    touch {
+        map-to-output "eDP-1"
+    }
+}
+```
+
+<ParamField path="map-to-output" type="string">
+  Map the device to a specific output. Valid output names are the same as the ones used for output configuration.
+</ParamField>
+
+<ParamField path="calibration-matrix" type="float[6]">
+  Set to six floating point numbers to change the calibration matrix.
+  - <Badge text="Since: 25.02" /> for `tablet`
+  - <Badge text="Since: 25.11" /> for `touch`
+</ParamField>
+
+<Info>
+  When a tablet is not mapped to any output, it will map to the union of all connected outputs, without aspect ratio correction.
+</Info>
+
+## General Settings
+
+### Disable Power Key Handling
+
+By default, niri will take over the power button to make it sleep instead of power off. Set this if you would like to configure the power button elsewhere (i.e. `logind.conf`).
+
+```kdl
+input {
+    disable-power-key-handling
+}
+```
+
+### Warp Mouse to Focus
+
+Makes the mouse warp to newly focused windows. Does not make the cursor visible if it had been hidden.
+
+```kdl
+input {
+    warp-mouse-to-focus
+}
+```
+
+<Accordion title="Warp Mode (Since: 25.05)">
+  You can customize the warp behavior with the `mode` property:
+
+  <ParamField path="mode" type="string" default="default">
+    - `default`: warps separately horizontally and vertically
+    - `center-xy`: warps by both X and Y coordinates together
+    - `center-xy-always`: always warps to center, even if mouse was already inside the window
+  </ParamField>
+
+  ```kdl
+  input {
+      warp-mouse-to-focus mode="center-xy"
+  }
+  ```
+</Accordion>
+
+### Focus Follows Mouse
+
+Focuses windows and outputs automatically when moving the mouse over them.
+
+```kdl
+input {
+    focus-follows-mouse
+}
+```
+
+<Accordion title="Max Scroll Amount (Since: 0.1.8)">
+  You can optionally set `max-scroll-amount`. Then, focus-follows-mouse won't focus a window if it will result in the view scrolling more than the set amount. The value is a percentage of the working area width.
+
+  ```kdl
+  input {
+      // Allow focus-follows-mouse when it results in scrolling at most 10% of the screen.
+      focus-follows-mouse max-scroll-amount="10%"
+  }
+  ```
+
+  ```kdl
+  input {
+      // Allow focus-follows-mouse only when it will not scroll the view.
+      focus-follows-mouse max-scroll-amount="0%"
+  }
+  ```
+</Accordion>
+
+### Workspace Auto Back and Forth
+
+Normally, switching to the same workspace by index twice will do nothing (since you're already on that workspace). If this flag is enabled, switching to the same workspace by index twice will switch back to the previous workspace.
+
+```kdl
+input {
+    workspace-auto-back-and-forth
+}
+```
+
+<Info>
+  Niri will correctly switch to the workspace you came from, even if workspaces were reordered in the meantime.
+</Info>
+
+### Modifier Keys
+
+<Badge text="Since: 25.05" />
+
+Customize the `Mod` key for key bindings. Only valid modifiers are allowed, e.g. `Super`, `Alt`, `Mod3`, `Mod5`, `Ctrl`, `Shift`.
+
+<ParamField path="mod-key" type="string" default="Super">
+  The modifier key to use for bindings when running niri on a TTY (default: `Super`)
+</ParamField>
+
+<ParamField path="mod-key-nested" type="string" default="Alt">
+  The modifier key to use for bindings when running niri as a nested window (default: `Alt`)
+</ParamField>
+
+```kdl
+// Switch the mod keys around: use Alt normally, and Super inside a nested window.
+input {
+    mod-key "Alt"
+    mod-key-nested "Super"
+}
+```
+
+<Warning>
+  There are a lot of default bindings with Mod, none of them "make it through" to the underlying window. You probably don't want to set `mod-key` to Ctrl or Shift, since Ctrl is commonly used for app hotkeys, and Shift is used for regular typing.
+</Warning>
